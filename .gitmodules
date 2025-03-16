@@ -1,3 +1,9 @@
 [submodule "microservices-demo"]
 	path = microservices-demo
 	url = https://github.com/GoogleCloudPlatform/microservices-demo
+[submodule "social-network-lb"]
+	path = social-network-lb
+	url = https://github.com/xczhw/social-network-lb
+[submodule "DeathStarBench"]
+	path = DeathStarBench
+	url = https://github.com/delimitrou/DeathStarBench
