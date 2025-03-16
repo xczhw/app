@@ -6,4 +6,4 @@
 	url = https://github.com/xczhw/social-network-lb
 [submodule "DeathStarBench"]
 	path = DeathStarBench
-	url = https://github.com/delimitrou/DeathStarBench
+	url = https://github.com/xczhw/DeathStarBench
