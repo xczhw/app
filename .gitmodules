@@ -1,3 +1,0 @@
-[submodule "microservice-demo"]
-	path = microservice-demo
-	url = https://github.com/GoogleCloudPlatform/microservices-demo
