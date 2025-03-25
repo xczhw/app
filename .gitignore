@@ -1,3 +1,4 @@
 runner/tester/py/*.json
 __pycache__/
+*.pyc
 node_modules/
