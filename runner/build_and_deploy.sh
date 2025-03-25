@@ -2,6 +2,19 @@
 
 set -e  # 发生错误时终止脚本执行
 
+CONTAINER_NAME="istio-proxy-builder"
+if ! docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+    echo "启动 istio-proxy-builder 容器..."
+    docker run --init --privileged --name $CONTAINER_NAME --hostname $CONTAINER_NAME \
+        -v /var/run/docker.sock:/var/run/docker.sock:rw \
+        -v /mydata/istio-testing/work:/work \
+        -v $CACHE_DIR:/home/.cache \
+        -w /work \
+        -d gcr.io/istio-testing/build-tools-proxy:release-1.22-latest-amd64 bash -c '/bin/sleep 300d'
+else
+    echo "容器 $CONTAINER_NAME 已经存在，跳过创建。"
+fi
+
 # 进入 istio-proxy-builder 容器并构建 envoy
 echo "Building envoy inside istio-proxy-builder container..."
 docker exec -it istio-proxy-builder bash -c "make build BAZEL_STARTUP_ARGS='' BAZEL_BUILD_ARGS='-s --override_repository=envoy=/work/envoy' BAZEL_TARGETS=':envoy'"
@@ -20,10 +33,10 @@ mv /mydata/istio/istio/out/linux_amd64/istioctl /usr/local/bin/istioctl
 
 # 安装 Istio
 # echo "Installing Istio..."
-istioctl install -f /mydata/istio-testing/work/runner/istio-operator.yaml -y
-kubectl apply -f /mydata/istio-testing/work/runner/addons
+istioctl install -f /mydata/app/runner/istio-operator.yaml -y
+kubectl apply -f /mydata/app/runner/addons
 # 启用链路追踪
-kubectl apply -f /mydata/istio-testing/work/runner/telemetry.yaml
+kubectl apply -f /mydata/app/runner/telemetry.yaml
 
 # # 重新部署 whoami 服务
 # echo "Redeploying whoami service..."
