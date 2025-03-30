@@ -1,0 +1,11 @@
+# # whoami-destination-rule.yaml
+# apiVersion: networking.istio.io/v1beta1
+# kind: DestinationRule
+# metadata:
+#   name: whoami
+#   namespace: default
+# spec:
+#   host: whoami
+#   trafficPolicy:
+#     loadBalancer:
+#       simple: CUSTOMIZED

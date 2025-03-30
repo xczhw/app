@@ -7,7 +7,7 @@ spec:
   host: adservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -19,7 +19,7 @@ spec:
   host: cartservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -31,7 +31,7 @@ spec:
   host: checkoutservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -43,7 +43,7 @@ spec:
   host: currencyservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -55,7 +55,7 @@ spec:
   host: emailservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -67,7 +67,7 @@ spec:
   host: frontend.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -79,19 +79,7 @@ spec:
   host: frontend-external.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
-
----
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
-metadata:
-  name: kubernetes-lb
-  namespace: default
-spec:
-  host: kubernetes.default.svc.cluster.local
-  trafficPolicy:
-    loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -103,7 +91,7 @@ spec:
   host: paymentservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -115,7 +103,7 @@ spec:
   host: productcatalogservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -127,7 +115,7 @@ spec:
   host: recommendationservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -139,7 +127,7 @@ spec:
   host: redis-cart.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---
 apiVersion: networking.istio.io/v1beta1
@@ -151,6 +139,6 @@ spec:
   host: shippingservice.default.svc.cluster.local
   trafficPolicy:
     loadBalancer:
-      simple: LEAST_REQUEST
+      simple: RANDOM
 
 ---

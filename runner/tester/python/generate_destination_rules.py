@@ -3,15 +3,6 @@ import subprocess
 import yaml
 import os
 
-# 支持的策略列表
-algo_list = [
-    "ROUND_ROBIN",
-    "RANDOM",
-    "LEAST_REQUEST",
-    "PASSTHROUGH",
-    "CUSTOMIZED"
-]
-
 def get_services(namespace):
     try:
         output = subprocess.check_output(
@@ -43,7 +34,7 @@ def generate_destination_rule(service, namespace, policy):
     }
 
 def generate_for_policy(policy, services, namespace, app):
-    output_dir = os.path.join("yaml", app)
+    output_dir = os.path.join("yaml", app, "algo")
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, f"{policy}-{app}.yaml")
     temp_file_paths = []
@@ -72,7 +63,14 @@ def generate_for_policy(policy, services, namespace, app):
 
     print(f"\n📦 合并输出: {output_file}\n")
 
+def generate_yaml(algo_list, namespace, app):
+    services = get_services(namespace)
+    for algo in algo_list:
+        generate_for_policy(algo, services, namespace, app)
+
 def main():
+    from constants import algo_list
+
     parser = argparse.ArgumentParser(description="生成 Istio DestinationRule YAML 文件")
     parser.add_argument("--namespace", default="default", help="Kubernetes 命名空间（默认: default）")
     parser.add_argument("--policy", default="LEAST_REQUEST", help="负载均衡策略（默认: LEAST_REQUEST）")

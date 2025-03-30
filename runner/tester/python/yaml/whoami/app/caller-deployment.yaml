@@ -1,0 +1,23 @@
+# caller-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caller
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caller
+  template:
+    metadata:
+      labels:
+        app: caller
+    spec:
+      containers:
+      - name: caller
+        image: curlimages/curl
+        command: ["/bin/sh", "-c"]
+        args:
+        - "while true; do curl -s http://whoami.default.svc.cluster.local; sleep 2; done"
+

@@ -1,4 +1,6 @@
 import subprocess
+import time
+import os
 
 def get_jaeger_nodeport():
     try:
@@ -16,7 +18,6 @@ def get_jaeger_nodeport():
     except subprocess.CalledProcessError as e:
         print(f"Error executing kubectl command: {e}")
         return None
-
 
 def get_service_name_of_span(span):
     # 提取服务名称
@@ -50,3 +51,29 @@ def format_duration(duration):
         return f"{duration / 1e3:.1f}ms"
     else:
         return f"{duration / 1e6:.1f}s"
+
+def wait_for_pods_ready(namespace, timeout=300):
+    print("⏳ 正在等待所有 Pod 就绪...")
+    start = time.time()
+    while time.time() - start < timeout:
+        output = subprocess.getoutput(f"kubectl get pods -n {namespace}")
+        lines = output.splitlines()[1:]  # 跳过表头
+        all_running = all("Running" in line for line in lines)
+        if all_running:
+            print("✅ 所有 Pod 已就绪")
+            return True
+        time.sleep(5)
+    print("❌ 等待超时，部分 Pod 未就绪")
+    return False
+
+def apply_algo_yaml(policy, app):
+    yaml_path = os.path.join("yaml", app, "algo", f"{policy}-{app}.yaml")
+    print(f"🚀 应用算法 YAML：{yaml_path}")
+    subprocess.run(["kubectl", "apply", "-f", yaml_path], check=True)
+
+def save_timestamped_data(app, policy, start_ts, end_ts):
+    dir_path = os.path.join("data", app, policy, f"{start_ts}_{end_ts}")
+    os.makedirs(dir_path, exist_ok=True)
+    with open(os.path.join(dir_path, "timestamps.txt"), "w") as f:
+        f.write(f"Start: {start_ts}\nEnd: {end_ts}\n")
+    print(f"📁 数据保存至: {dir_path}")
