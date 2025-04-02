@@ -69,7 +69,7 @@ def generate_yaml(algo_list, namespace, app):
         generate_for_policy(algo, services, namespace, app)
 
 def main():
-    from constants import algo_list
+    from constants import ALGO_LIST
 
     parser = argparse.ArgumentParser(description="生成 Istio DestinationRule YAML 文件")
     parser.add_argument("--namespace", default="default", help="Kubernetes 命名空间（默认: default）")
@@ -84,7 +84,7 @@ def main():
         return
 
     if args.all_algo:
-        for algo in algo_list:
+        for algo in ALGO_LIST:
             print(f"\n🚀 正在生成策略: {algo}")
             generate_for_policy(algo, services, args.namespace, args.app)
     else:

@@ -4,8 +4,8 @@ from datetime import datetime
 
 def process_metrics(app, experiment_id, algo, start_ts, end_ts):
     # 构建目录路径
-    data_dir = os.path.join("data", app, experiment_id, algo)
-    metrics_file = f"pod_resource_usage_{app}.csv"
+    data_dir = os.path.join("data", app, experiment_id)
+    metrics_file = os.path.join(data_dir, f"metrics.csv")
 
     # 加载原始数据
     try:
@@ -27,7 +27,7 @@ def process_metrics(app, experiment_id, algo, start_ts, end_ts):
     filtered_df = df[(df['timestamp'] >= start_dt) & (df['timestamp'] <= end_dt)]
 
     # 保存筛选后的数据到目标文件夹
-    output_dir = os.path.join(data_dir, f"{start_ts}_{end_ts}")
+    output_dir = os.path.join(data_dir, algo, f"{start_ts}_{end_ts}")
     os.makedirs(output_dir, exist_ok=True)
     filtered_df.to_csv(os.path.join(output_dir, "metrics.csv"), index=False)
 
@@ -53,5 +53,5 @@ def process_all_metrics(app, experiment_id):
 if __name__ == "__main__":
     # 你可以手动修改 app 和 experiment_id 来进行调试
     app = "onlineBoutique"  # 或其他应用
-    experiment_id = "20250329-031915"  # 你想要处理的实验编号
+    experiment_id = "20250330-111213"  # 你想要处理的实验编号
     process_all_metrics(app, experiment_id)
