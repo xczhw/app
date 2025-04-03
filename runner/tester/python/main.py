@@ -8,7 +8,7 @@ import draw_metrics
 import draw_jaeger
 from constants import ALGO_LIST, APP_SERVICE_NAME_MAP
 from JaegerDataFetcher import JaegerDataFetcher
-from utils import wait_for_pods_ready, apply_algo_yaml
+from utils import wait_for_pods_ready, apply_algo_yaml, utc_microtime
 from app_launcher import deploy
 from generate_destination_rules import generate_yaml
 from process_metrics import process_all_metrics
@@ -16,7 +16,7 @@ from process_trace import split_traces_by_time
 
 def main():
     # 生成实验编号（精确时间戳）
-    experiment_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    experiment_id = utc_microtime()
     print(f"🔖 当前实验编号: {experiment_id}\n")
 
     # 1. 部署应用
@@ -42,7 +42,7 @@ def main():
     ])
 
     # 5. 处理所有策略并记录时间
-    global_start_ts_micro = int(datetime.now().timestamp() * 1e6)
+    global_start_ts_micro = utc_microtime()
     timestamps = []
     for algo in selected_algos:
         apply_algo_yaml(algo, args.app)
@@ -50,12 +50,12 @@ def main():
         print(f"⏸️ 切换策略后等待 {args.pause_seconds} 秒\n")
         time.sleep(args.pause_seconds)
 
-        start_ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+        start_ts = utc_microtime()
         print(f"🕒 开始时间: {start_ts}")
 
         time.sleep(args.run_seconds)
 
-        end_ts = datetime.now().strftime("%Y%m%d%H%M%S%f")
+        end_ts = utc_microtime()
         print(f"🕒 结束时间: {end_ts}")
 
         output_dir = os.path.join("data", args.app, experiment_id, algo)
@@ -65,7 +65,7 @@ def main():
         print(f"📁 时间戳保存至: {output_dir}\n")
 
         timestamps.append((start_ts, end_ts, output_dir))
-    global_end_ts_micro = int(datetime.now().timestamp() * 1e6)
+    global_end_ts_micro = utc_microtime()
     with open(os.path.join("data", args.app, experiment_id, "timestamps.txt"), "w") as f:
         f.write(f"Start: {global_start_ts_micro}\nEND:{global_end_ts_micro}\n")
     print(f"📁 总时间戳已保存")

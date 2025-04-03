@@ -2,7 +2,7 @@ import subprocess
 import time
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 
 def get_jaeger_nodeport():
     try:
@@ -80,37 +80,6 @@ def save_timestamped_data(app, policy, start_ts, end_ts):
         f.write(f"Start: {start_ts}\nEnd: {end_ts}\n")
     print(f"📁 数据保存至: {dir_path}")
 
-# def get_jaeger_url(namespace="istio-system"):
-#     try:
-#         # 执行 kubectl 命令获取 tracing 服务信息
-#         result = subprocess.check_output(
-#             ["kubectl", "get", "svc", "-n", namespace],
-#             text=True
-#         )
-
-#         # 查找包含 "tracing" 的行
-#         for line in result.splitlines():
-#             if "tracing" in line:
-#                 # 提取出对应的端口部分
-#                 parts = line.split()
-#                 if len(parts) >= 5:
-#                     port_info = parts[4]  # 格式是 "80:31836/TCP,16685:30422/TCP"
-#                     ports = port_info.split(",")
-#                     for port in ports:
-#                         # 找到对应的 80 端口
-#                         if port.startswith("80:"):
-#                             local_port = port.split(":")[1]
-#                             jaeger_url = f"http://localhost:{local_port}/jaeger/api/traces"
-#                             return jaeger_url
-
-#         raise ValueError("未找到 Jaeger 的服务端口信息")
-
-#     except subprocess.CalledProcessError as e:
-#         print(f"❌ 执行 kubectl 命令失败: {e}")
-#     except Exception as e:
-#         print(f"❌ 发生错误: {e}")
-#     return None
-
 def safe_parse_time(s: str) -> pd.Timestamp:
     try:
         # 尝试用标准方式解析
@@ -121,3 +90,13 @@ def safe_parse_time(s: str) -> pd.Timestamp:
             return pd.Timestamp(datetime.strptime(s, "%Y%m%d%H%M%S%f"))
         except Exception:
             raise ValueError(f"无法解析时间戳: {s}")
+
+def utc_microtime() -> int:
+    """
+    返回当前 UTC 时间的微秒级时间戳。
+
+    Returns:
+        int: 当前时间的 UTC 微秒级时间戳。
+    """
+    now_utc = datetime.now(timezone.utc)
+    return int(now_utc.timestamp() * 1_000_000)

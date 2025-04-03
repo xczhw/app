@@ -4,6 +4,7 @@ import signal
 import subprocess
 import pandas as pd
 from datetime import datetime
+from utils import utc_microtime
 
 # 使用kubectl命令获取Pod的CPU和内存使用情况
 def get_pod_resource_usage(namespace="default"):
@@ -24,7 +25,7 @@ def get_pod_resource_usage(namespace="default"):
                 pod_name = parts[0]
                 cpu_usage = parts[1]
                 memory_usage = parts[2]
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                timestamp = utc_microtime()
 
                 pod_data.append({
                     "timestamp": timestamp,
@@ -51,7 +52,6 @@ def collect_data(namespace="default", interval=10, output_file="pod_resource_usa
     signal.signal(signal.SIGTERM, handle_signal)
 
     while not stop_flag["stop"]:
-        print(f"📊 抓取 {namespace} 下的Pod资源使用情况...")
         pod_data = get_pod_resource_usage(namespace)
         if pod_data:
             data.extend(pod_data)

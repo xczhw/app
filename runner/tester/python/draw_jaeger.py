@@ -93,7 +93,7 @@ class GraphVisualizer:
         nx.draw_networkx_edge_labels(filtered_graph, pos, edge_labels=edge_labels, font_size=10, label_pos=0.5)
         plt.title("Pod-to-Pod Call Graph", fontsize=14)
         plt.savefig(f"{output_dir}/pod_call_graph.pdf", dpi=300, bbox_inches="tight")
-        plt.show()
+        # plt.show()
 
     @staticmethod
     def draw_service_graph(service_graph, output_dir="fig/"):
@@ -109,7 +109,7 @@ class GraphVisualizer:
         nx.draw_networkx_edge_labels(service_graph, pos, edge_labels=edge_labels, font_size=9, label_pos=0.5)
         plt.title("Service-to-Service Call Graph", fontsize=14)
         plt.savefig(f"{output_dir}/service_call_graph.pdf", dpi=300, bbox_inches="tight")
-        plt.show()
+        # plt.show()
 
     @staticmethod
     def plot_duration_trends(trace_categories, base_folder="fig/"):
@@ -312,5 +312,6 @@ if __name__ == "__main__":
     # traces = fetcher.fetch_traces()
     # fetcher.save_traces(traces)
     # main(traces)
-    plot_latency_with_algorithms("data/onlineBoutique/20250401-012508")
-    plot_latency_and_cdf_for_algos("data/onlineBoutique/20250401-012508")
+    exp_id = "20250402-093711"
+    plot_latency_with_algorithms(f"data/onlineBoutique/{exp_id}")
+    plot_latency_and_cdf_for_algos(f"data/onlineBoutique/{exp_id}")

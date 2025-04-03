@@ -28,7 +28,7 @@ APP_YAML_MAP = {
     "whoami": "./yamls/whoami/app"
 }
 
-def deploy(app_name, replicas=5):
+def deploy(app_name, replicas=20):
     yaml_path = APP_YAML_MAP.get(app_name)
     if not yaml_path:
         print(f"错误：未找到应用 '{app_name}' 的 YAML 文件路径。")
