@@ -10,11 +10,11 @@ import draw_metrics
 import draw_jaeger
 from constants import ALGO_LIST, APP_SERVICE_NAME_MAP
 from JaegerDataFetcher import JaegerDataFetcher
-from utils import wait_for_pods_ready, apply_algo_yaml, utc_microtime
 from app_launcher import deploy
 from generate_destination_rules import generate_yaml
 from process_metrics import process_all_metrics
 from process_trace import split_traces_by_time
+from utils import wait_for_pods_ready, apply_algo_yaml, utc_microtime, sleep_with_progress_bar
 
 def main():
     # 定义信号处理函数
@@ -66,12 +66,12 @@ def main():
             apply_algo_yaml(algo, args.app)
 
             print(f"⏸️ 切换策略后等待 {args.pause_seconds} 秒\n")
-            time.sleep(args.pause_seconds)
+            sleep_with_progress_bar(args.pause_seconds, "策略切换等待中")
 
             start_ts = utc_microtime()
             print(f"🕒 开始时间: {start_ts}")
 
-            time.sleep(args.run_seconds)
+            sleep_with_progress_bar(args.run_seconds, "策略运行中")
 
             end_ts = utc_microtime()
             print(f"🕒 结束时间: {end_ts}")
@@ -85,7 +85,7 @@ def main():
             timestamps.append((start_ts, end_ts, output_dir))
         global_end_ts_micro = utc_microtime()
         with open(os.path.join("data", args.app, experiment_id, "timestamps.txt"), "w") as f:
-            f.write(f"Start: {global_start_ts_micro}\nEND:{global_end_ts_micro}\n")
+            f.write(f"Start: {global_start_ts_micro}\nEnd: {global_end_ts_micro}\n")
         print(f"📁 总时间戳已保存")
 
     except Exception as e:

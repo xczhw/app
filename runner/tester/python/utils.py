@@ -3,6 +3,7 @@ import time
 import os
 import pandas as pd
 from datetime import datetime, timezone
+from tqdm import tqdm
 
 def get_jaeger_nodeport():
     try:
@@ -100,3 +101,19 @@ def utc_microtime() -> int:
     """
     now_utc = datetime.now(timezone.utc)
     return int(now_utc.timestamp() * 1_000_000)
+
+def sleep_with_progress_bar(seconds: int, description: str):
+    """
+    显示进度条的 sleep 函数。
+
+    Args:
+        seconds (int): 需要等待的秒数。
+        description (str): 显示在进度条前的描述文本。
+    """
+    with tqdm(total=seconds, desc=description, bar_format='{l_bar}{bar} [{remaining}]') as pbar:
+        for _ in range(seconds):
+            time.sleep(1)
+            pbar.update(1)
+
+if __name__ == "__main__":
+    sleep_with_progress_bar(10, "测试一下")
