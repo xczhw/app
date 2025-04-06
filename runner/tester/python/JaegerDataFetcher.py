@@ -13,24 +13,23 @@ class JaegerDataFetcher:
 
     def fetch_all_traces(self, start_time, end_time):
         """
-        获取时间段内所有 Jaeger traces
+        从 end_time 倒着获取 traces，直到 trace 里出现早于 start_time 的 span（这些 trace 会被丢弃）
         :param start_time: 起始时间戳（微秒）
         :param end_time: 结束时间戳（微秒）
         :return: 所有 trace 数据
         """
-        current_start = int(start_time)
+        current_end = int(end_time)
         all_traces = []
         seen_trace_ids = set()
 
-        while current_start < end_time:
+        while current_end > start_time:
             params = {
                 'service': self.service_name,
                 'limit': self.limit,
-                'start': current_start,
-                'end': end_time
+                'end': current_end
             }
 
-            print(f"Fetching traces from {current_start} to {end_time}...")
+            print(f"🔄 Fetching traces from {start_time} to {current_end}...")
             response = requests.get(self.jaeger_base_url, params=params)
 
             if response.status_code != 200:
@@ -39,22 +38,35 @@ class JaegerDataFetcher:
 
             trace_data = response.json().get("data", [])
             if not trace_data:
-                print("✅ 已获取全部 traces。")
+                print("✅ 没有更多 traces。")
                 break
 
-            max_start_time_in_batch = current_start
+            min_start = float('inf')
+            max_end = 0
+
+            found_too_old = False
 
             for trace in trace_data:
                 trace_id = trace["traceID"]
                 if trace_id in seen_trace_ids:
-                    continue  # 避免重复
+                    continue
                 seen_trace_ids.add(trace_id)
 
-                # 更新当前最大 start time
-                for span in trace.get("spans", []):
-                    span_start = span.get("startTime", 0)
-                    if span_start > max_start_time_in_batch:
-                        max_start_time_in_batch = span_start
+                spans = trace.get("spans", [])
+                if not spans:
+                    continue
+
+                first_span = spans[0]
+                span_start = first_span.get("startTime", 0)
+                span_end = span_start + first_span.get("duration", 0)
+
+                # 检查是否太早，直接跳过这个 trace
+                if span_start < start_time:
+                    found_too_old = True
+                    continue
+
+                min_start = min(min_start, span_start)
+                max_end = max(max_end, span_end)
 
                 trace_response = requests.get(f"{self.jaeger_base_url}/{trace_id}")
                 if trace_response.status_code == 200:
@@ -64,15 +76,23 @@ class JaegerDataFetcher:
                     except requests.exceptions.JSONDecodeError:
                         print(f"❌ 解码失败 trace: {trace_id}")
 
-            # 更新下一次的 start_time，+1 防止重复
-            if max_start_time_in_batch == current_start:
-                # 防止死循环
-                print("⚠️ 没有新的时间进展，终止")
+            print(f"🕒 当前 batch 最小 start: {min_start}, 最大 end: {max_end}")
+
+            if found_too_old:
+                print("⏹️ 遇到早于 start_time 的 trace，停止拉取。")
                 break
-            current_start = max_start_time_in_batch + 1
+
+            # 更新下一次的 end_time（往前挪）
+            if min_start == float('inf') or min_start <= start_time:
+                print("⛔ 没有更早的 traces，终止。")
+                break
+
+            current_end = min_start - 1
 
         print(f"📦 共获取 {len(all_traces)} 条 traces")
         return all_traces
+
+
 
     def save_traces(self, traces, folder="./", filename="trace_results.json"):
         """
@@ -91,20 +111,20 @@ class JaegerDataFetcher:
 if __name__ == "__main__":
     # 示例服务名，可以替换为你的服务名
     service_name = "frontend.default"  # 替换为你的 Jaeger 服务名
+    global_start_ts_micro = 1743955535688697
+    global_end_ts_micro = 1743955840097186
+
+    experiment_dir = "data/onlineBoutique/1743955376367504"
 
     # 创建 JaegerDataFetcher 实例
-    jaeger_fetcher = JaegerDataFetcher(service_name, limit=20)
+    jaeger_fetcher = JaegerDataFetcher(service_name)
 
-    traces = jaeger_fetcher.fetch_traces()
-
-    # 或者，你可以提供自定义的时间范围：
-    # start_time = 1633046400000000  # 示例起始时间（微秒）
-    # end_time = 1633050000000000    # 示例结束时间（微秒）
-    # traces = jaeger_fetcher.fetch_traces(start_time, end_time)
+    # 获取 Jaeger 数据并保存
+    trace_data = jaeger_fetcher.fetch_all_traces(global_start_ts_micro, global_end_ts_micro)
 
     # 如果抓取到数据，保存它
-    if traces:
+    if trace_data:
         # 保存 trace 数据到文件
-        jaeger_fetcher.save_traces(traces)
+        jaeger_fetcher.save_traces(trace_data, experiment_dir)
     else:
         print("没有找到任何 traces 数据。")

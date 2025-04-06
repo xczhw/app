@@ -1,0 +1,32 @@
+[0;1;32m●[0m containerd.service - containerd container runtime
+     Loaded: loaded (/lib/systemd/system/containerd.service; enabled; vendor preset: enabled)
+     Active: [0;1;32mactive (running)[0m since Fri 2025-04-04 08:22:31 MDT; 4s ago
+       Docs: https://containerd.io
+    Process: 1825365 ExecStartPre=/sbin/modprobe overlay (code=exited, status=0/SUCCESS)
+   Main PID: 1825366 (containerd)
+      Tasks: 354
+     Memory: 1.8G
+     CGroup: /system.slice/containerd.service
+             ├─  17044 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 621c3eb9f2b8863312568c849172457017f0c73a2ca452881c93c1354f47ce12 -address /run/containerd/containerd.sock
+             ├─  17072 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 8e4d1ff2ff228937e02e8c8a3466b01900c2ded7f4f3580cc67d130543ab25c0 -address /run/containerd/containerd.sock
+             ├─  17096 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 14575e835a8efd3bf8755a7c2a05bfc6d1a2eb827dcba8f1c73781c95d0a8ac2 -address /run/containerd/containerd.sock
+             ├─  17112 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id af7f992f69ac70f65bb54b8104666eeca706503b39d5eb6baec4d69b500c8501 -address /run/containerd/containerd.sock
+             ├─  18245 /usr/bin/containerd-shim-runc-v2 -namespace moby -id e3700baea0c083e3555ef88cb261532569eaaa9af08ac70b8c5fb75ec1590e04 -address /run/containerd/containerd.sock
+             ├─  18365 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id c4039cd06c382ad51d43edecc148dae7514970d52c198b39cfc2015dd12ef0dd -address /run/containerd/containerd.sock
+             ├─  18374 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 909672b2597f1b93687bfa102c4b6bac8335ec9f994f403b0fbca14a5dd5ea99 -address /run/containerd/containerd.sock
+             ├─  20656 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 27db400976176f8d23522a82c3eba8d98b2a72f5baa9675d7da50c3bc497f0d5 -address /run/containerd/containerd.sock
+             ├─  20713 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id f19beced2e56fd8db25f51e7e68b31b056e7be90391e5399db4638143879f059 -address /run/containerd/containerd.sock
+             ├─  20755 /usr/bin/containerd-shim-runc-v2 -namespace k8s.io -id 83a5185170203884c81eed4b20994913d70abf9a757c9ba13d66859b21ecbdcf -address /run/containerd/containerd.sock
+             ├─  47098 /usr/bin/containerd-shim-runc-v2 -namespace moby -id e9222efe9ad68ce14e6086b2bcd32582aa7470fef0f923dd50172f75275c0b11 -address /run/containerd/containerd.sock
+             └─1825366 /usr/bin/containerd
+
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896316010-06:00" level=info msg="Start subscribing containerd event"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896511585-06:00" level=info msg="Start recovering state"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896598399-06:00" level=info msg=serving... address=/run/containerd/containerd.sock.ttrpc
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896682840-06:00" level=info msg=serving... address=/run/containerd/containerd.sock
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896725367-06:00" level=info msg="Start event monitor"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896777588-06:00" level=info msg="Start snapshots syncer"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896806626-06:00" level=info msg="Start cni network conf syncer for default"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.896840164-06:00" level=info msg="Start streaming server"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us containerd[1825366]: time="2025-04-04T08:22:31.897012645-06:00" level=info msg="containerd successfully booted in 0.324918s"
+Apr 04 08:22:31 node0.test-10g.lb-benchmark-pg0.utah.cloudlab.us systemd[1]: Started containerd container runtime.

@@ -450,7 +450,7 @@ spec:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: prometheus
   sessionAffinity: None
-  type: "ClusterIP"
+  type: "NodePort"
 ---
 # Source: prometheus/templates/deploy.yaml
 apiVersion: apps/v1

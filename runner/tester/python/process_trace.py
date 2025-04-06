@@ -11,10 +11,6 @@ def split_traces_by_time(trace_file, start_ts, end_ts, output_dir):
         print(f"❌ 找不到文件 {trace_file}")
         return
 
-    # 转换时间戳为 datetime 对象，方便比对
-    start_dt = datetime.strptime(start_ts, "%Y%m%d%H%M%S%f")
-    end_dt = datetime.strptime(end_ts, "%Y%m%d%H%M%S%f")
-
     # 存储筛选后的 traces
     filter_traces = []
 
@@ -23,9 +19,8 @@ def split_traces_by_time(trace_file, start_ts, end_ts, output_dir):
         is_in_time_span = False
         for span in trace['data'][0]['spans']:
             span_start_time = span['startTime']
-            span_start_dt = datetime.fromtimestamp(span_start_time / 1e6)
             # 筛选出在指定时间范围内的 spans
-            if start_dt <= span_start_dt <= end_dt:
+            if start_ts <= span_start_time <= start_ts:
                 is_in_time_span = True
                 break
         if (is_in_time_span):

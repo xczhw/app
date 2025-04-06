@@ -52,7 +52,44 @@ spec:
               cpu: 10m
       volumes:
         - name: data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: jaeger-pvc
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: jaeger-pv
+  namespace: istio-system
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /mydata/pvc/
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - node1.test-10g.lb-benchmark-pg0.utah.cloudlab.us  # 替换成你要绑定的节点名
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jaeger-pvc
+  namespace: istio-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 100Gi
 ---
 apiVersion: v1
 kind: Service

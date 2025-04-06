@@ -8,7 +8,7 @@ if ! docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
     docker run --init --privileged --name $CONTAINER_NAME --hostname $CONTAINER_NAME \
         -v /var/run/docker.sock:/var/run/docker.sock:rw \
         -v /mydata/istio-testing/work:/work \
-        -v $CACHE_DIR:/home/.cache \
+        -v /mydata/istio-testing/home/.cache:/home/.cache \
         -w /work \
         -d gcr.io/istio-testing/build-tools-proxy:release-1.22-latest-amd64 bash -c '/bin/sleep 300d'
 else

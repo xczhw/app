@@ -14,17 +14,8 @@ def process_metrics(app, experiment_id, algo, start_ts, end_ts):
         print(f"❌ 找不到文件 {metrics_file}")
         return
 
-    # 转换时间戳为 datetime 对象，方便比对
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-
-    # 计算时间范围（start_ts 和 end_ts 是字符串格式）
-    start_dt = datetime.strptime(start_ts, "%Y%m%d%H%M%S%f")
-    end_dt = datetime.strptime(end_ts, "%Y%m%d%H%M%S%f")
-
-    print(start_dt, end_dt)
-
     # 筛选出在指定时间范围内的数据
-    filtered_df = df[(df['timestamp'] >= start_dt) & (df['timestamp'] <= end_dt)]
+    filtered_df = df[(int(df['timestamp']) >= start_ts) & (int(df['timestamp']) <= end_ts)]
 
     # 保存筛选后的数据到目标文件夹
     output_dir = os.path.join(data_dir, algo, f"{start_ts}_{end_ts}")

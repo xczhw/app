@@ -28,12 +28,12 @@ APP_YAML_MAP = {
     "whoami": "./yamls/whoami/app"
 }
 
-def deploy(app_name, replicas=20):
+def deploy(app_name, replicas):
     yaml_path = APP_YAML_MAP.get(app_name)
     if not yaml_path:
         print(f"错误：未找到应用 '{app_name}' 的 YAML 文件路径。")
         return
-    if os.path.isdir(yaml_path):
+    if replicas > 0 and os.path.isdir(yaml_path):
         for file in os.listdir(yaml_path):
             if file.endswith((".yaml", ".yml")):
                 full_path = os.path.join(yaml_path, file)

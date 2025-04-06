@@ -10,6 +10,6 @@ parser.add_argument("--policy", default="LEAST_REQUEST", help="负载均衡策�
 parser.add_argument("--all-algo", action="store_true", help="为所有策略生成 YAML （覆盖 --policy）")
 parser.add_argument("--interval", type=int, default=1)
 parser.add_argument('--num_experiments', type=int, default=1, help='Number of recent experiments to process')
-parser.add_argument("--replicas", type=int, default=20, help="Number of replicas to set (default: 20).")
+parser.add_argument("--replicas", type=int, default=-1, help="Number of replicas to set (default: -1 means do not change numbers of replicas).")
 
 args = parser.parse_args()
