@@ -7,7 +7,7 @@ import requests
 import time
 import os
 from collections import defaultdict
-from utils import safe_parse_time
+from utils import safe_parse_time, read_timestamps
 
 import utils
 from JaegerDataFetcher import JaegerDataFetcher
@@ -69,7 +69,7 @@ class TraceCategorizer:
                     unique_services.add(service_name)
                     total_duration += span["duration"]
                     if timestamp is None:
-                        timestamp = span["startTime"] / 1e6  # Convert to milliseconds
+                        timestamp = span["startTime"]
 
             category_key = tuple(sorted(unique_services))
             self.trace_categories[category_key].append((timestamp, total_duration))
@@ -192,18 +192,8 @@ def plot_latency_with_algorithms(base_dir: str):
             continue
 
         timestamps_file = os.path.join(algo_path, "timestamps.txt")
-        if os.path.isfile(timestamps_file):
-            with open(timestamps_file, "r") as f:
-                lines = f.readlines()
-                for i in range(0, len(lines), 2):
-                    if i + 1 >= len(lines):
-                        break
-                    start_line = lines[i].strip()
-                    end_line = lines[i + 1].strip()
-                    if start_line.startswith("Start:") and end_line.startswith("End:"):
-                        start = safe_parse_time(start_line.split("Start:")[1].strip())
-                        end = safe_parse_time(end_line.split("End:")[1].strip())
-                        algo_periods.append((start, end, algo))
+        start, end = read_timestamps(timestamps_file)
+        algo_periods.append((pd.to_datetime(start, unit='us'), pd.to_datetime(end, unit='us'), algo))
 
     # 绘图
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -212,8 +202,8 @@ def plot_latency_with_algorithms(base_dir: str):
     ax.set_xlabel('Time')
     ax.set_title("Latency Over Time with Algorithm Periods")
 
-    # for start, end, algo in algo_periods:
-    #     ax.axvspan(start, end, alpha=0.3, label=algo)
+    for start, end, algo in algo_periods:
+        ax.axvspan(start, end, alpha=0.3, label=algo)
 
     ax.legend()
     fig.autofmt_xdate()
@@ -305,13 +295,7 @@ def main(traces, base_dir="fig"):
     plot_latency_cdf_for_traces(trace_categories, base_dir)
 
 if __name__ == "__main__":
-    # service_name = "frontend.default"
 
-    # 获取数据
-    # fetcher = JaegerDataFetcher(service_name)
-    # traces = fetcher.fetch_traces()
-    # fetcher.save_traces(traces)
-    # main(traces)
-    exp_id = "20250402-093711"
+    exp_id = "1743997611765933"
     plot_latency_with_algorithms(f"data/onlineBoutique/{exp_id}")
     plot_latency_and_cdf_for_algos(f"data/onlineBoutique/{exp_id}")

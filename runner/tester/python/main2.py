@@ -10,11 +10,11 @@ import draw_metrics
 import draw_jaeger
 from constants import ALGO_LIST, APP_SERVICE_NAME_MAP
 from JaegerDataFetcher import JaegerDataFetcher
-from app_launcher import deploy
+from app_launcher import deploy, remove
 from generate_destination_rules import generate_yaml
 from process_metrics import process_all_metrics
 from process_trace import split_traces_by_time
-from utils import wait_for_pods_ready, apply_algo_yaml, utc_microtime, sleep_with_progress_bar, read_timestamps
+from utils import wait_for_pods_ready, wait_for_pods_cleanup, apply_algo_yaml, utc_microtime, sleep_with_progress_bar, read_timestamps
 
 def main():
     # 定义信号处理函数
@@ -37,16 +37,13 @@ def main():
         experiment_id = str(utc_microtime())
         print(f"🔖 当前实验编号: {experiment_id}\n")
 
-        # 1. 部署应用
-        deploy(args.app, args.replicas)
+
 
         # 2. 生成 YAML
         selected_algos = ALGO_LIST if args.all_algo else [args.policy]
         generate_yaml(selected_algos, args.namespace, args.app)
 
-        # 3. 等待 Pod 就绪
-        if not wait_for_pods_ready(args.namespace):
-            return
+
 
         # 4. 启动指标采集子进程
         experiment_dir = os.path.join("data", args.app, experiment_id)
@@ -63,9 +60,15 @@ def main():
         global_start_ts_micro = utc_microtime()
         timestamps = []
         for algo in selected_algos:
+            # 1. 部署应用
+            deploy(args.app, args.replicas)
+
+            # 3. 等待 Pod 就绪
+            if not wait_for_pods_ready(args.namespace):
+                return
             apply_algo_yaml(algo, args.app)
 
-            print(f"⏸️ 切换策略后等待 {args.pause_seconds} 秒\n")
+            print(f"⏸️ 部署完成后等待 {args.pause_seconds} 秒\n")
             sleep_with_progress_bar(args.pause_seconds, "策略切换等待中")
 
             start_ts = utc_microtime()
@@ -83,6 +86,11 @@ def main():
             print(f"📁 时间戳保存至: {output_dir}\n")
 
             timestamps.append((start_ts, end_ts, output_dir))
+            remove(args.app)
+            if not wait_for_pods_cleanup(args.namespace):
+                print("❌ Pod 清理失败，请检查！")
+                return
+
         global_end_ts_micro = utc_microtime()
         with open(os.path.join("data", args.app, experiment_id, "timestamps.txt"), "w") as f:
             f.write(f"Start: {global_start_ts_micro}\nEnd: {global_end_ts_micro}\n")
@@ -101,14 +109,17 @@ def main():
     jaeger_fetcher = JaegerDataFetcher(f"{APP_SERVICE_NAME_MAP[args.app]}.{args.namespace}")
 
     # 获取 Jaeger 数据并保存
-    trace_data = jaeger_fetcher.fetch_all_traces(global_start_ts_micro, global_end_ts_micro)
-    jaeger_fetcher.save_traces(trace_data, experiment_dir)
+    for algo in selected_algos:
+        algo_dir = os.path.join(experiment_dir, algo)
+        start_ts, end_ts = read_timestamps(os.path.join(algo_dir, "timestamps.txt"))
+        trace_data = jaeger_fetcher.fetch_all_traces(start_ts, end_ts)
+        jaeger_fetcher.save_traces(trace_data, algo_dir)
 
-    # 8. 拆分和保存 Jaeger 数据
-    trace_file = os.path.join(experiment_dir, "trace_results.json")
-    for start_ts, end_ts, algo_dir in timestamps:
-        print(start_ts, end_ts)
-        split_traces_by_time(trace_file, start_ts, end_ts, algo_dir)
+    # # 8. 拆分和保存 Jaeger 数据
+    # trace_file = os.path.join(experiment_dir, "trace_results.json")
+    # for start_ts, end_ts, algo_dir in timestamps:
+    #     print(start_ts, end_ts)
+    #     split_traces_by_time(trace_file, start_ts, end_ts, algo_dir)
 
     # 9. 处理所有收集到的数据
     process_all_metrics(args.app, experiment_id)

@@ -92,22 +92,6 @@ class JaegerDataFetcher:
         print(f"📦 共获取 {len(all_traces)} 条 traces")
         return all_traces
 
-
-
-    def save_traces(self, traces, folder="./", filename="trace_results.json"):
-        """
-        将 Jaeger trace 数据保存为 JSON 文件
-        :param traces: trace 数据
-        :param filename: 保存文件名
-        """
-        save_path = os.path.join(folder, filename)
-        if traces:
-            with open(save_path, "w") as f:
-                json.dump(traces, f, indent=4)
-            print(f"📁 下载了 {len(traces)} 条 traces，并保存到 {save_path}.")
-        else:
-            print("❌ 没有有效的 trace 数据可保存")
-
 if __name__ == "__main__":
     # 示例服务名，可以替换为你的服务名
     service_name = "frontend.default"  # 替换为你的 Jaeger 服务名

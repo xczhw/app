@@ -4,6 +4,10 @@ import os
 import pandas as pd
 from datetime import datetime, timezone
 from tqdm import tqdm
+from typing import Tuple
+import gzip
+import pickle
+import json
 
 def get_jaeger_nodeport():
     try:
@@ -69,6 +73,20 @@ def wait_for_pods_ready(namespace, timeout=300):
     print("❌ 等待超时，部分 Pod 未就绪")
     return False
 
+def wait_for_pods_cleanup(namespace, timeout=300):
+    print("⏳ 正在等待所有 Pod 清理...")
+    start = time.time()
+    while time.time() - start < timeout:
+        output = subprocess.getoutput(f"kubectl get pods -n {namespace}")
+        lines = output.splitlines()[1:]  # 跳过表头
+        all_deleted = all("Completed" in line or "Terminating" in line for line in lines)
+        if all_deleted:
+            print("✅ 所有 Pod 已清理")
+            return True
+        time.sleep(5)
+    print("❌ 等待超时，部分 Pod 未清理")
+    return False
+
 def apply_algo_yaml(policy, app):
     yaml_path = os.path.join("yaml", app, "algo", f"{policy}-{app}.yaml")
     print(f"🚀 应用算法 YAML：{yaml_path}")
@@ -114,6 +132,43 @@ def sleep_with_progress_bar(seconds: int, description: str):
         for _ in range(seconds):
             time.sleep(1)
             pbar.update(1)
+
+def read_timestamps(timestamps_file) -> Tuple[int, int]:
+    with open(timestamps_file, 'r') as f:
+        lines = f.readlines()
+        start_ts = int(lines[0].strip().split(":")[1])
+        end_ts = int(lines[1].strip().split(":")[1])
+    return start_ts, end_ts
+
+def save_traces(traces, folder="./", filename="trace_results.pkl"):
+    """
+    将 Jaeger trace 数据保存为 pkl 文件
+    :param traces: trace 数据
+    :param filename: 保存文件名
+    """
+    save_path = os.path.join(folder, filename)
+    if traces:
+        with gzip.open(save_path, 'wb') as f:
+            pickle.dump(traces, f)
+        print(f"📁 下载了 {len(traces)} 条 traces，并保存到 {save_path}.")
+    else:
+        print("❌ 没有有效的 trace 数据可保存")
+
+def load_traces(folder="./", filename="trace_results.pkl"):
+    """
+    从 pkl 文件加载 Jaeger trace 数据
+    :param filename: 保存文件名
+    :return: trace 数据
+    """
+    load_path = os.path.join(folder, filename)
+    if os.path.exists(load_path):
+        with gzip.open(load_path, 'rb') as f:
+            traces = pickle.load(f)
+        print(f"📁 成功加载 {len(traces)} 条 traces.")
+        return traces
+    else:
+        print("❌ 指定的文件不存在")
+        return []
 
 if __name__ == "__main__":
     sleep_with_progress_bar(10, "测试一下")

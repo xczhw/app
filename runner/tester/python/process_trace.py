@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone
+from utils import read_timestamps
 
 def split_traces_by_time(trace_file, start_ts, end_ts, output_dir):
     # 读取 trace 文件
@@ -18,9 +18,9 @@ def split_traces_by_time(trace_file, start_ts, end_ts, output_dir):
     for trace in trace_data:  # 假设根数据是一个包含 'data' 键的列表
         is_in_time_span = False
         for span in trace['data'][0]['spans']:
-            span_start_time = span['startTime']
+            span_start_time = int(span['startTime'])
             # 筛选出在指定时间范围内的 spans
-            if start_ts <= span_start_time <= start_ts:
+            if start_ts <= span_start_time <= end_ts:
                 is_in_time_span = True
                 break
         if (is_in_time_span):
@@ -38,6 +38,17 @@ def split_traces_by_time(trace_file, start_ts, end_ts, output_dir):
 
     print(f"📊 {len(filter_traces)} 条数据已保存到 {output_file}")
 
+def process_all_traces(app, experiment_id):
+    # 遍历所有策略和时间戳，调用处理函数
+    base_dir = os.path.join("data", app, str(experiment_id))
+    algo_list = os.listdir(base_dir)
+    trace_file = base_dir.join("trace_results.json")
+    for algo in algo_list:
+        algo_dir = base_dir.join(algo)
+        if os.path.isdir(algo_dir):
+            timestamps_file = os.path.join(algo_dir, "timestamps.txt")
+            start_ts, end_ts = read_timestamps(timestamps_file)
+            split_traces_by_time(trace_file, start_ts, end_ts, algo_dir)
+
 if __name__ == '__main__':
-    split_traces_by_time("data/onlineBoutique/20250330-101115/trace_results.json",
-                         "20250330101124047152", "20250330101234057470", "data/onlineBoutique/20250330-101115/RANDOM")
+    process_all_traces("onlineBoutique", 1743993804744946)
