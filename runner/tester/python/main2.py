@@ -1,11 +1,13 @@
 import os
 import signal
 import sys
-from config import args
+import shutil
+import yaml
 
+from config import args
 import draw_metrics
 import draw_duration
-from constants import ALGO_LIST, APP_SERVICE_NAME_MAP
+from constants import ALGO_LIST, APP_SERVICE_NAME_MAP, APP_YAML_MAP
 from JaegerDataFetcher import JaegerDataFetcher
 from app_launcher import deploy, remove
 import generate_destination_rules
@@ -91,6 +93,26 @@ def runner(experiment_dir, selected_algos):
 
     draw(experiment_dir)
 
+def save_config(experiment_dir):
+    config_dir = os.path.join(experiment_dir, "config")
+    os.makedirs(config_dir, exist_ok=True)
+
+    # 拷贝应用 YAML 文件夹
+    app_yaml_path = APP_YAML_MAP.get(args.app)
+    if app_yaml_path and os.path.exists(app_yaml_path):
+        dst_yaml_dir = os.path.join(config_dir, "app_yaml")
+        shutil.copytree(app_yaml_path, dst_yaml_dir, dirs_exist_ok=True)
+        print(f"✅ YAML 配置已保存至: {dst_yaml_dir}")
+    else:
+        print(f"⚠️ 未找到 YAML 路径或路径不存在: {app_yaml_path}")
+
+    # 保存 args 参数
+    args_dict = vars(args)
+    args_file = os.path.join(config_dir, "args.yaml")
+    with open(args_file, "w") as f:
+        yaml.dump(args_dict, f, allow_unicode=True)
+    print(f"✅ 参数配置已保存至: {args_file}")
+
 def main():
     experiment_id = str(utc_microtime())
     print(f"🔖 当前实验编号: {experiment_id}\n")
@@ -100,6 +122,8 @@ def main():
     selected_algos = ALGO_LIST if args.all_algo else [args.policy]
 
     runner(experiment_dir, selected_algos)
+
+    save_config(experiment_dir)
 
 if __name__ == "__main__":
     main()

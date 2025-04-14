@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import yaml
 import os
+from constants import APP_YAML_MAP
 
 def update_deployment_replicas(yaml_file_path: str, replicas: int, output_file_path: str = None):
     """
@@ -21,12 +22,6 @@ def update_deployment_replicas(yaml_file_path: str, replicas: int, output_file_p
     output_path = output_file_path if output_file_path else yaml_file_path
     with open(output_path, 'w') as f:
         yaml.dump_all(docs, f, sort_keys=False)
-
-# 应用与 YAML 文件路径的映射表
-APP_YAML_MAP = {
-    "onlineBoutique": "./yaml_files/onlineBoutique/app",
-    "whoami": "./yaml_files/whoami/app"
-}
 
 def deploy(app_name, replicas):
     yaml_path = APP_YAML_MAP.get(app_name)
