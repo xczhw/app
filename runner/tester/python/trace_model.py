@@ -44,6 +44,9 @@ class Trace:
         self._parse_spans(trace_data["spans"])
         self.root_spans = [s for s in self.spans if s.parent_id is None]
 
+        self.total_duration = self._get_total_duration()
+        self.start_time = min(s.start_time for s in self.spans) if self.spans else 0
+
     def _parse_spans(self, span_data_list):
         # 解析 spans
         for span_json in span_data_list:
@@ -57,11 +60,10 @@ class Trace:
             if span.parent_id and span.parent_id in self.span_map:
                 self.span_map[span.parent_id].add_child(span)
 
-    def get_total_duration(self):
+    def _get_total_duration(self):
         if not self.spans:
             return 0
         return max(s.end_time for s in self.spans) - min(s.start_time for s in self.spans)
-
 
     def get_upstream_downstream_latencies(self):
         result = []
@@ -94,7 +96,7 @@ class Trace:
     def to_dict(self):
         return {
             "trace_id": self.trace_id,
-            "total_duration": self.get_total_duration(),
+            "total_duration": self._get_total_duration(),
             "pod_sequence": self.get_pod_sequence(),
             "spans": [s.to_dict() for s in self.spans],
             "service_names": list(self.service_map.values()),

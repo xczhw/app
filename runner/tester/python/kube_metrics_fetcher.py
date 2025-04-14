@@ -1,12 +1,9 @@
-import argparse
+import threading
 import time
-import signal
 import subprocess
 import pandas as pd
-from datetime import datetime
 from utils import utc_microtime
 
-# 使用kubectl命令获取Pod的CPU和内存使用情况
 def get_pod_resource_usage(namespace="default"):
     try:
         result = subprocess.run(
@@ -40,32 +37,57 @@ def get_pod_resource_usage(namespace="default"):
         print(f"获取Pod资源使用情况失败: {e}")
         return []
 
-def collect_data(namespace="default", interval=10, output_file="pod_resource_usage.csv"):
-    data = []
-    stop_flag = {"stop": False}
 
-    def handle_signal(signum, frame):
-        print("📴 收到停止信号，停止抓取数据...")
-        stop_flag["stop"] = True
+class MetricsCollector(threading.Thread):
+    def __init__(self, namespace, interval, output_file):
+        super().__init__()
+        self.namespace = namespace
+        self.interval = interval
+        self.output_file = output_file
+        self._stop_flag = threading.Event()
+        self.data = []
 
-    signal.signal(signal.SIGINT, handle_signal)
-    signal.signal(signal.SIGTERM, handle_signal)
+    def stop(self):
+        self._stop_flag.set()
 
-    while not stop_flag["stop"]:
-        pod_data = get_pod_resource_usage(namespace)
-        if pod_data:
-            data.extend(pod_data)
-        time.sleep(interval)
+    def run(self):
+        print("🟢 开始采集指标")
+        while not self._stop_flag.is_set():
+            pod_data = get_pod_resource_usage(self.namespace)
+            if pod_data:
+                self.data.extend(pod_data)
+                # print(f"📊 采样 {len(pod_data)} 条")
+            time.sleep(self.interval)
 
-    df = pd.DataFrame(data)
-    df.to_csv(output_file, index=False)
-    print(f"✅ 数据已保存至 {output_file}")
+        print("📴 停止采集，正在保存数据...")
+        if self.data:
+            df = pd.DataFrame(self.data)
+            df.to_csv(self.output_file, index=False)
+            print(f"✅ 指标保存至 {self.output_file}")
+        else:
+            print("⚠️ 没有数据，未生成文件")
 
 if __name__ == "__main__":
+    import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--namespace", default="default")
-    parser.add_argument("--interval", type=int, default=1)
-    parser.add_argument("--output", default="pod_resource_usage.csv")
+    parser.add_argument("--namespace", default="default", help="Kubernetes 命名空间")
+    parser.add_argument("--interval", type=int, default=5, help="采样间隔（秒）")
+    parser.add_argument("--output", default="test_metrics.csv", help="输出 CSV 文件路径")
+    parser.add_argument("--duration", type=int, default=30, help="总采集时长（秒）")
     args = parser.parse_args()
 
-    collect_data(namespace=args.namespace, interval=args.interval, output_file=args.output)
+    print(f"🧪 启动测试采集器：namespace={args.namespace}, interval={args.interval}s, duration={args.duration}s")
+    collector = MetricsCollector(args.namespace, args.interval, args.output)
+    collector.start()
+
+    try:
+        for remaining in range(args.duration, 0, -1):
+            print(f"⏳ 采集中...剩余 {remaining} 秒", end="\r")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n🛑 收到 Ctrl+C，提前终止采集")
+
+    collector.stop()
+    collector.join()
+    print("✅ 采集完成，退出测试")

@@ -1,6 +1,8 @@
 import requests
-import json
+import pickle
+import gzip
 import os
+from trace_model import Trace
 from utils import get_jaeger_nodeport
 
 class JaegerDataFetcher:
@@ -71,8 +73,8 @@ class JaegerDataFetcher:
                 trace_response = requests.get(f"{self.jaeger_base_url}/{trace_id}")
                 if trace_response.status_code == 200:
                     try:
-                        trace_json = trace_response.json()
-                        all_traces.append(trace_json)
+                        trace = Trace(trace_response.json())
+                        all_traces.append(trace)
                     except requests.exceptions.JSONDecodeError:
                         print(f"❌ 解码失败 trace: {trace_id}")
 
@@ -91,6 +93,19 @@ class JaegerDataFetcher:
 
         print(f"📦 共获取 {len(all_traces)} 条 traces")
         return all_traces
+
+    def save_traces(self, trace_data, output_dir):
+        """
+        保存 traces 数据到指定目录
+        :param trace_data: Trace 对象列表
+        :param output_dir: 输出目录
+        """
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, f'trace_data.pkl.gz')
+        with gzip.open(output_file, 'wb') as out:
+            pickle.dump(trace_data, out)
+
+        print(f"✅ traces 数据已保存至 {output_file}")
 
 if __name__ == "__main__":
     # 示例服务名，可以替换为你的服务名

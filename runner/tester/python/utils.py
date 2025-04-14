@@ -88,7 +88,7 @@ def wait_for_pods_cleanup(namespace, timeout=300):
     return False
 
 def apply_algo_yaml(policy, app):
-    yaml_path = os.path.join("yaml", app, "algo", f"{policy}-{app}.yaml")
+    yaml_path = os.path.join("yaml_files", app, "algo", f"{policy}-{app}.yaml")
     print(f"🚀 应用算法 YAML：{yaml_path}")
     subprocess.run(["kubectl", "apply", "-f", yaml_path], check=True)
 

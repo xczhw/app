@@ -24,8 +24,8 @@ def update_deployment_replicas(yaml_file_path: str, replicas: int, output_file_p
 
 # 应用与 YAML 文件路径的映射表
 APP_YAML_MAP = {
-    "onlineBoutique": "./yaml/onlineBoutique/app",
-    "whoami": "./yamls/whoami/app"
+    "onlineBoutique": "./yaml_files/onlineBoutique/app",
+    "whoami": "./yaml_files/whoami/app"
 }
 
 def deploy(app_name, replicas):
