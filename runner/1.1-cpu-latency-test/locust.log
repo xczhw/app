@@ -1,10 +1,1 @@
-Forwarding from 127.0.0.1:8089 -> 8089
-Forwarding from [::1]:8089 -> 8089
-Handling connection for 8089
-Handling connection for 8089
-Handling connection for 8089
-Handling connection for 8089
-Handling connection for 8089
-Handling connection for 8089
-E0424 18:49:33.667322 3182001 portforward.go:409] an error occurred forwarding 8089 -> 8089: error forwarding port 8089 to pod 0777691e8c5b514801844a2316ec7dd9d540ae05f87b1f8d98792b00f0007342, uid : failed to find sandbox "0777691e8c5b514801844a2316ec7dd9d540ae05f87b1f8d98792b00f0007342" in store: not found
-error: lost connection to pod
+Error from server (NotFound): services "locust-master" not found

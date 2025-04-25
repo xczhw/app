@@ -1,0 +1,88 @@
+# 文件: memory-service.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-service
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-service
+  template:
+    metadata:
+      labels:
+        app: memory-service
+      annotations:
+        sidecar.istio.io/inject: "true"
+    spec:
+      containers:
+      - name: memory-service
+        image: node0:5000/memory-service:v1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "150Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memory-service
+  namespace: default
+  labels:
+    app: memory-service
+spec:
+  selector:
+    app: memory-service
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+# ---
+# # 用于从集群外访问服务的Gateway和VirtualService (如果需要)
+# apiVersion: networking.istio.io/v1alpha3
+# kind: Gateway
+# metadata:
+#   name: memory-service-gateway
+#   namespace: default
+# spec:
+#   selector:
+#     istio: ingressgateway
+#   servers:
+#   - port:
+#       number: 80
+#       name: http
+#       protocol: HTTP
+#     hosts:
+#     - "*"
+# ---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: memory-service
+  namespace: default
+spec:
+  hosts:
+  - "memory-service"
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: memory-service
+        port:
+          number: 80

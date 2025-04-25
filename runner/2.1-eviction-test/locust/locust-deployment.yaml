@@ -1,0 +1,90 @@
+# memory-test-locust.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-master
+  namespace: default  # 使用default命名空间，或者您可以创建专用命名空间
+  labels:
+    app: locust
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+      role: master
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: master
+    spec:
+      containers:
+      - name: locust
+        image: node0:5000/locust-memory-test:v1  # 您需要构建并推送这个镜像
+        args:
+        - "--master"
+        - "--web-host=0.0.0.0"
+        - "--host=http://memory-service.default.svc.cluster.local"  # 指向内存服务
+        - "--loglevel=DEBUG"
+        ports:
+        - name: web
+          containerPort: 8089
+        - name: master
+          containerPort: 5557
+        - name: worker
+          containerPort: 5558
+        imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-worker
+  namespace: default  # 与master保持一致
+  labels:
+    app: locust
+    role: worker
+spec:
+  replicas: 3  # 您可以调整worker数量来控制负载大小
+  selector:
+    matchLabels:
+      app: locust
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: worker
+    spec:
+      containers:
+      - name: locust
+        image: node0:5000/locust-memory-test:v1  # 与master使用相同镜像
+        args:
+        - "--worker"
+        - "--master-host=locust-master"
+        - "--host=http://memory-service.default.svc.cluster.local"
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust-master
+  namespace: default  # 与deployments保持一致
+  labels:
+    app: locust
+    role: master
+spec:
+  ports:
+  - port: 8089
+    targetPort: web
+    name: web
+  - port: 5557
+    targetPort: master
+    name: master
+  - port: 5558
+    targetPort: worker
+    name: worker
+  selector:
+    app: locust
+    role: master
+  type: NodePort  # 通过节点端口访问Web UI

@@ -1,0 +1,15 @@
+# kubelet-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubelet-config
+  namespace: kube-system
+data:
+  kubelet-config.yaml: |
+    evictionHard:
+      memory.available: "15%"
+    evictionSoft:
+      memory.available: "20%"
+    evictionSoftGracePeriod:
+      memory.available: "30s"
+    evictionPressureTransitionPeriod: "30s"
