@@ -1,0 +1,13 @@
+{
+  "name": "cpu-test-service",
+  "version": "1.0.0",
+  "description": "CPU负载测试服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "prom-client": "^14.2.0"
+  }
+}

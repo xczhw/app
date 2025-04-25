@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-master
+  namespace: cpu-latency-test
+  labels:
+    app: locust
+    role: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locust
+      role: master
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: master
+    spec:
+      containers:
+      - name: locust
+        image: node0:5000/locust-cpu-test:v1  # 替换为您的镜像名称
+        args:
+        - "--web-host=0.0.0.0"
+        - "--host=http://cpu-test-service.cpu-latency-test.svc.cluster.local"
+        ports:
+        - name: web
+          containerPort: 8089
+        - name: master
+          containerPort: 5557
+        - name: worker
+          containerPort: 5558
+        imagePullPolicy: Always  # 确保每次都拉取最新的镜像
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locust-worker
+  namespace: cpu-latency-test
+  labels:
+    app: locust
+    role: worker
+spec:
+  replicas: 3  # 增减worker数量可调整最大负载
+  selector:
+    matchLabels:
+      app: locust
+      role: worker
+  template:
+    metadata:
+      labels:
+        app: locust
+        role: worker
+    spec:
+      containers:
+      - name: locust
+        image: node0:5000/locust-cpu-test:v1  # 替换为您的镜像名称
+        args:
+        - "--worker"
+        - "--master-host=locust-master"
+        - "--host=http://cpu-test-service.cpu-latency-test.svc.cluster.local"
+        imagePullPolicy: Always  # 确保每次都拉取最新的镜像
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust-master
+  namespace: cpu-latency-test
+  labels:
+    app: locust
+    role: master
+spec:
+  ports:
+  - port: 8089
+    targetPort: web
+    name: web
+  - port: 5557
+    targetPort: master
+    name: master
+  - port: 5558
+    targetPort: worker
+    name: worker
+  selector:
+    app: locust
+    role: master
+  type: NodePort  # 或者使用LoadBalancer，取决于您的集群

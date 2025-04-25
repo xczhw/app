@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-test-service
+  namespace: cpu-latency-test
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: cpu-test-service
+  template:
+    metadata:
+      labels:
+        app: cpu-test-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+      - name: cpu-test-service
+        image: node0:5000/cpu-test-service:v1  # 如果使用远程仓库，改为your-registry/cpu-test-service:v1
+        resources:
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - name: http
+          containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        imagePullPolicy: Always  # 确保每次都拉取最新的镜像
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cpu-test-service
+  namespace: cpu-latency-test
+  labels:
+    app: cpu-test-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8080"
+spec:
+  selector:
+    app: cpu-test-service
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  type: ClusterIP

@@ -1,0 +1,17 @@
+# apiVersion: networking.istio.io/v1beta1
+# kind: VirtualService
+# metadata:
+#   name: cpu-test-metrics
+#   namespace: cpu-latency-test
+# spec:
+#   hosts:
+#   - cpu-test-service
+#   http:
+#   - match:
+#     - uri:
+#         prefix: /metrics
+#     route:
+#     - destination:
+#         host: cpu-test-service
+#         port:
+#           number: 80

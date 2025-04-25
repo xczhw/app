@@ -38,9 +38,9 @@ kubectl apply -f /mydata/app/runner/addons
 # 启用链路追踪
 kubectl apply -f /mydata/app/runner/telemetry.yaml
 
-# # 重新部署 whoami 服务
-# echo "Redeploying whoami service..."
-# kubectl delete -f /mydata/whoami || true  # 忽略不存在的错误
-# kubectl apply -f /mydata/whoami
+# 重新部署 whoami 服务
+echo "Redeploying whoami service..."
+kubectl delete -f /mydata/whoami || true  # 忽略不存在的错误
+kubectl apply -f /mydata/whoami
 
 echo "Deployment completed successfully!"
