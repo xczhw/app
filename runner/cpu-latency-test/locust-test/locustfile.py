@@ -1,4 +1,4 @@
-from locust import HttpUser, task, between, events
+from locust import HttpUser, task, between, events, LoadTestShape
 import time
 import logging
 
@@ -102,3 +102,21 @@ class CPULoadTestUser(HttpUser):
                 response.failure(f"请求失败，状态码: {response.status_code}")
             else:
                 response.success()
+
+class StepLoadShape(LoadTestShape):
+    step_time = 300        # 每个阶段持续 5 分钟（单位秒）
+    step_users = 50        # 每次增加 50 个用户
+    spawn_rate = 10        # 每秒启动 10 个用户
+    max_users = 300        # 最大用户数
+    run_time_limit = 1800  # 总运行时间限制 30 分钟
+
+    def tick(self):
+        run_time = self.get_run_time()
+
+        if run_time > self.run_time_limit:
+            return None  # 结束测试
+
+        current_step = run_time // self.step_time
+        user_count = min((current_step + 1) * self.step_users, self.max_users)
+
+        return (user_count, self.spawn_rate)
