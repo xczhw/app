@@ -1,0 +1,4 @@
+Strategy,Eviction_Rate
+RR,18
+LC,14
+RA,3

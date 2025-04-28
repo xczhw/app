@@ -1,0 +1,7 @@
+Method,Name,Error,Occurrences
+POST,/allocate (small),"gaierror(-3, 'Temporary failure in name resolution')",7
+GET,/metrics,HTTPError('503 Server Error: Service Unavailable for url: /metrics'),1012
+GET,/metrics,"gaierror(-3, 'Temporary failure in name resolution')",14
+POST,/allocate (large),"gaierror(-3, 'Temporary failure in name resolution')",6
+POST,/allocate (small),HTTPError('503 Server Error: Service Unavailable for url: /allocate (small)'),643
+POST,/allocate (large),HTTPError('503 Server Error: Service Unavailable for url: /allocate (large)'),363

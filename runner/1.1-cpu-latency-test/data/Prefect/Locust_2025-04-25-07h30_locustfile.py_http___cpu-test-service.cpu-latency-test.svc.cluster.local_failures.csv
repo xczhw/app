@@ -1,0 +1,14 @@
+Method,Name,Error,Occurrences
+GET,CPU测试-强度50000,CatchResponseError('请求失败，状态码: 503'),56
+GET,CPU测试-强度50000,CatchResponseError('请求超时'),572
+GET,CPU测试-强度250000,CatchResponseError('请求失败，状态码: 503'),45
+GET,CPU测试-强度150000,CatchResponseError('请求失败，状态码: 503'),37
+GET,CPU测试-强度200000,CatchResponseError('请求失败，状态码: 503'),37
+GET,CPU测试-强度300000,CatchResponseError('请求失败，状态码: 503'),18
+GET,CPU测试-强度150000,CatchResponseError('请求超时'),654
+GET,CPU测试-强度100000,CatchResponseError('请求失败，状态码: 503'),39
+GET,CPU测试-强度300000,CatchResponseError('请求超时'),385
+GET,CPU测试-强度100000,CatchResponseError('请求超时'),681
+GET,高强度CPU测试,CatchResponseError('请求失败，状态码: 503'),765
+GET,CPU测试-强度250000,CatchResponseError('请求超时'),679
+GET,CPU测试-强度200000,CatchResponseError('请求超时'),675

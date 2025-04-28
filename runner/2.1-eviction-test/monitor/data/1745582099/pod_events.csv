@@ -1,0 +1,6 @@
+Timestamp,Elapsed Time (s),Event Type,Pod Name,Message
+2025-04-25 05:55:29,30.87,OOMKilled,memory-service-6ddfc54c6b-lqjvt,Container memory-service was OOMKilled
+2025-04-25 05:55:42,43.00,OOMKilled,memory-service-6ddfc54c6b-vnw9q,Container memory-service was OOMKilled
+2025-04-25 05:55:42,43.00,OOMKilled,memory-service-6ddfc54c6b-wk859,Container memory-service was OOMKilled
+2025-04-25 05:55:54,55.10,OOMKilled,memory-service-6ddfc54c6b-455mf,Container memory-service was OOMKilled
+2025-04-25 05:56:18,79.31,OOMKilled,memory-service-6ddfc54c6b-kfxcs,Container memory-service was OOMKilled

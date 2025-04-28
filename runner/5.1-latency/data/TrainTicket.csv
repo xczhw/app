@@ -1,0 +1,13 @@
+Algorithm,P90,P99
+Random,489,TO
+Round Robin,476,TO
+Weighted Round Robin,459,1762
+CPU-P2C,452,1518
+Least Loaded,437,1489
+LL-P2C,446,1607
+YARP-P2C,483,TO
+Linear,497,TO
+C3,465,1635
+Prequal,448,1502
+Ring Hash,512,TO
+Maglev,472,1775
