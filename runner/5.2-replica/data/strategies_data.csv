@@ -1,0 +1,14 @@
+strategy,avg_active_replicas,online_boutique_p99_latency,social_network_p99_latency,train_ticket_p99_latency
+Random,8.7,235,487,712
+RoundRobin,8.5,228,465,695
+WRR,6.4,187,352,543
+CPU-P2C,6.2,172,325,512
+LL,6.5,165,318,498
+LL-P2C,6.3,158,312,485
+YARP-P2C,5.9,145,295,462
+Linear,5.7,138,283,455
+C3,5.4,124,268,432
+Prequal,5.2,118,255,412
+RingHash,5.8,152,305,478
+Maglev,5.7,147,298,465
+CILB+RA+DA,3.9,105,232,387
