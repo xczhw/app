@@ -7,6 +7,9 @@
 [submodule "DeathStarBench"]
 	path = DeathStarBench
 	url = https://github.com/xczhw/DeathStarBench
+[submodule "TrainTicket"]
+	path = TrainTicket
+	url = https://github.com/FudanSELab/train-ticket
 [submodule "whoami"]
 	path = whoami
 	url = https://github.com/xczhw/whoami-test
