@@ -1,0 +1,4 @@
+Strategy,Total Evictions,Eviction Reduction vs RR (%),Eviction Reduction vs LC (%)
+Round-Robin,125,0.0,0.0
+Least-CPU,125,0.0,0.0
+Resource-Aware,120,4.0,4.0

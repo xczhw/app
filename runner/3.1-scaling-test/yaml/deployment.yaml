@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scaling-test-service
+  namespace: scaling-latency-test
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: scaling-test-service
+  template:
+    metadata:
+      labels:
+        app: scaling-test-service
+    spec:
+      containers:
+      - name: scaling-test-service
+        image: node0:5000/scaling-test-service:v1  # 如果使用远程仓库，改为your-registry/scaling-test-service:v1
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        ports:
+        - name: http
+          containerPort: 8080
+        imagePullPolicy: Always  # 确保每次都拉取最新的镜像
