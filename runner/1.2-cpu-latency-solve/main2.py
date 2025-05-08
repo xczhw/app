@@ -10,6 +10,7 @@ NUM_REPLICAS = 10
 SIMULATION_DURATION = 30  # minutes
 SAMPLING_INTERVAL = 0.25  # minute
 CPU_THRESHOLD = 5  # % threshold for active replica counting
+LATENCY_TIMEOUT = 2000  # ms - timeout threshold for latency
 
 # Traffic patterns - requests per second
 def generate_traffic(pattern="ramp-up", duration=SIMULATION_DURATION):
@@ -83,6 +84,9 @@ class RoundRobinLB(LoadBalancer):
     def route_traffic(self, requests_per_second):
         requests_per_replica = requests_per_second / self.num_replicas
         distribution = [requests_per_replica] * self.num_replicas
+        for i in range(requests_per_second % self.num_replicas):
+            distribution[(self.current_index + i) % self.num_replicas] += 1
+        self.current_index = (self.current_index + requests_per_second) % self.num_replicas
         self.update_metrics(distribution)
         return distribution
 
@@ -116,7 +120,7 @@ class LeastCpuLB(LoadBalancer):
         return distribution
 
 class CILBLB(LoadBalancer):
-    def __init__(self, num_replicas, cpu_threshold=85):
+    def __init__(self, num_replicas, cpu_threshold=60):
         super().__init__(num_replicas)
         self.name = "CILB"
         self.cpu_threshold = cpu_threshold  # CPU使用率阈值，超过此值不再分配流量
@@ -191,7 +195,7 @@ def run_simulation():
             p95, p99 = lb.get_latency(distribution)
 
             results.append({
-                'time': t,
+                'time': t * SAMPLING_INTERVAL,
                 'pattern': pattern,
                 'strategy': lb.name,
                 'traffic': rps,
@@ -250,84 +254,116 @@ lc_improvement = {
 improvements = pd.concat([improvements, pd.DataFrame([rr_improvement, lc_improvement])])
 improvements.to_csv('results/improvement_percentages.csv', index=False)
 
-# Create visualizations
-plt.figure(figsize=(10, 6))
+# Create separate visualizations
 
-# Plot active replicas over time
-plt.subplot(2, 1, 1)
+# 1. Plot active replicas over time
+plt.figure(figsize=(10, 6))
 for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
     plt.plot(strategy_data['time'], strategy_data['active_replicas'], label=strategy)
 
-
 plt.xlabel('Time (minutes)')
 plt.ylabel('Active Replicas')
+plt.title('Active Replicas Over Time')
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('results/active_replicas_over_time.pdf')
+plt.close()
 
-# Plot latency over time
-plt.subplot(2, 1, 2)
+# 2. Plot latency over time with timeout threshold
+plt.figure(figsize=(10, 6))
 for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
-    plt.plot(strategy_data['time'], strategy_data['p95_latency'], label=f'{strategy} P95')
+    time_data = strategy_data['time'].values
+    original_latency_data = strategy_data['p95_latency'].values
 
+    # Cap latency values at the timeout threshold
+    capped_latency_data = np.minimum(original_latency_data, LATENCY_TIMEOUT)
+
+    # Plot the line with capped values
+    line, = plt.plot(time_data, capped_latency_data, label=f'{strategy} P95')
+    line_color = line.get_color()
+
+    # Mark points that exceed the threshold with 'x'
+    timeout_indices = original_latency_data > LATENCY_TIMEOUT
+    if any(timeout_indices):
+        plt.plot(time_data[timeout_indices],
+                 [LATENCY_TIMEOUT] * sum(timeout_indices),
+                 'x', color=line_color, markersize=8, markeredgewidth=2)
 
 plt.xlabel('Time (minutes)')
 plt.ylabel('Latency (ms)')
+plt.title('P95 Latency Over Time')
+plt.axhline(y=LATENCY_TIMEOUT, color='r', linestyle='--', label=f'Timeout ({LATENCY_TIMEOUT} ms)')
+plt.ylim(0, LATENCY_TIMEOUT * 1.1)  # Limit height with some padding
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.7)
-
 plt.tight_layout()
-plt.savefig('results/rampup_performance.png')
+plt.savefig('results/latency_over_time.pdf')
+plt.close()
 
-# Add a plot for traffic vs active replicas
-plt.figure(figsize=(12, 5))
+# 3. Plot traffic over time (separate)
+plt.figure(figsize=(10, 6))
+traffic_time = results_df[results_df['strategy'] == 'Round-Robin']['time'].values
 traffic_data = results_df[results_df['strategy'] == 'Round-Robin']['traffic'].values  # Traffic is same for all strategies
-
-# Plot traffic
-plt.subplot(1, 2, 1)
-plt.plot(traffic_data, color='black', linestyle='--', label='Traffic (RPS)')
-
+plt.plot(traffic_time, traffic_data, color='black', linestyle='-', label='Traffic (RPS)')
 plt.xlabel('Time (minutes)')
 plt.ylabel('Requests per Second')
+plt.title('Traffic Over Time')
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('results/traffic_over_time.pdf')
+plt.close()
 
-# Bar chart comparing average active replicas
-plt.subplot(1, 2, 2)
+# 4. Bar chart comparing average active replicas
+plt.figure(figsize=(10, 6))
 avg_active = summary['active_replicas']
 plt.bar(avg_active.index, avg_active.values)
-
 plt.ylabel('Number of Replicas')
+plt.title('Average Active Replicas by Strategy')
 plt.grid(True, linestyle='--', alpha=0.7)
-
 plt.tight_layout()
-plt.savefig('results/traffic_and_replicas.png')
+plt.savefig('results/avg_active_replicas.pdf')
+plt.close()
 
-# Resource efficiency visualization
+# 5. Resource efficiency visualization (latency vs replicas)
 plt.figure(figsize=(10, 6))
-
-# Create scatter plot of latency vs active replicas
 for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
-    avg_latency = strategy_data['p95_latency'].mean()
+    original_avg_latency = strategy_data['p95_latency'].mean()
+    # Cap at timeout threshold
+    capped_avg_latency = min(original_avg_latency, LATENCY_TIMEOUT)
     avg_replicas = strategy_data['active_replicas'].mean()
-    plt.scatter(avg_replicas, avg_latency, s=100, label=strategy)
 
+    # Plot point
+    marker = 'o'
+    if original_avg_latency > LATENCY_TIMEOUT:
+        # Use regular marker but add an annotation
+        plt.scatter(avg_replicas, capped_avg_latency, s=100, marker=marker, label=f"{strategy} (capped)")
+        # Add small 'x' marker to indicate capping
+        plt.plot(avg_replicas, capped_avg_latency, 'x', color='black', markersize=6)
+    else:
+        plt.scatter(avg_replicas, capped_avg_latency, s=100, marker=marker, label=strategy)
 
 plt.xlabel('Average Active Replicas (Resource Usage)')
 plt.ylabel('Average P95 Latency (ms)')
+plt.title('Efficiency vs Performance')
+plt.ylim(0, LATENCY_TIMEOUT * 1.1)  # Limit height
+plt.axhline(y=LATENCY_TIMEOUT, color='r', linestyle='--', label=f'Timeout ({LATENCY_TIMEOUT} ms)')
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.legend()
 
 # Add annotation showing percentage improvements
 x_min, x_max = plt.xlim()
 y_min, y_max = plt.ylim()
-plt.text(x_min + (x_max-x_min)*0.05, y_max - (y_max-y_min)*0.1,
+plt.text(x_min + (x_max-x_min)*0.05, y_max - (y_max-y_min)*0.2,
          f"CILB reduces active replicas by:\n{rr_improvement['active_replicas_reduction']:.1f}% vs RR\n{lc_improvement['active_replicas_reduction']:.1f}% vs LC",
          bbox=dict(facecolor='white', alpha=0.7))
 
-plt.savefig('results/efficiency_vs_performance.png')
+plt.savefig('results/efficiency_vs_performance.pdf')
+plt.close()
 
 print("Simulation completed. Results saved to 'results' directory.")
 print(f"Active replicas reduction: CILB vs RR: {rr_improvement['active_replicas_reduction']:.2f}%")
