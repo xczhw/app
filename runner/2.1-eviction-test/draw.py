@@ -17,6 +17,8 @@ matplotlib.rcParams.update({
     'legend.fontsize': 14
 })
 
+FIGURE_SIZE = (9, 4.5)  # 设置图形大小
+
 def load_data(data_dir='data/data-2025-4-25'):
     # 读取CPU使用率数据
     cpu_file = os.path.join(data_dir, 'CPU-usage.csv')
@@ -52,8 +54,8 @@ def load_data(data_dir='data/data-2025-4-25'):
     return cpu_data, memory_data, restart_times
 
 def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
-    # 保持原来的比例，但增加整体大小以适应更大的字体
-    plt.figure(figsize=(12, 6))
+    # 保持原来的比例，但增加整体大小以适应更大的字体和顶部的图例
+    plt.figure(figsize=FIGURE_SIZE)  # 增加了高度以容纳顶部的图例
 
     pod_name = cpu_data.columns[1]  # 获取Pod名称
 
@@ -137,23 +139,29 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
         restart_count += 1
         plt.axvspan(start_min, end_min, color='gray', alpha=0.3, label='Pod Restart' if restart_count == 1 else None)
 
-    # 设置标题和标签，使用更大的字体
-
+    # 设置标签
     plt.xlabel('Time from experiment start (minutes)', labelpad=10)
     plt.ylabel('Percentage (%)', labelpad=10)
     plt.grid(True, linestyle='--', alpha=0.7)
 
-    # 创建一个包含所有项目的图例，使用更大的字体
+    # 创建横向图例并放在顶部
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys(), loc='upper right', framealpha=0.9)
+    plt.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc='upper center',  # 将图例放在顶部中央
+        bbox_to_anchor=(0.5, 1.15),  # 将图例移到图外上方
+        ncol=len(by_label),  # 使所有图例项目横向排列
+        framealpha=0.9
+    )
 
     # 保存图片，增加DPI以提高质量
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    # 先使用tight_layout确保所有元素都可见
-    plt.tight_layout(rect=[0, 0.03, 1, 0.97])  # 留出空间给底部的注释
+    # 调整布局以确保图例不被裁剪
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # 顶部留出更多空间给图例
 
     plt.savefig(os.path.join(output_dir, 'eviction-test.pdf'), format='pdf', dpi=600, bbox_inches='tight')
     # plt.show()

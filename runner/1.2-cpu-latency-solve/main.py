@@ -11,6 +11,14 @@ SIMULATION_DURATION = 30  # minutes
 SAMPLING_INTERVAL = 0.25  # minute
 CPU_THRESHOLD = 5  # % threshold for active replica counting
 LATENCY_TIMEOUT = 2000  # ms - timeout threshold for latency
+# 添加图片尺寸全局参数
+FIGURE_SIZE = (4, 3)  # 默认图片尺寸 (width, height) in inches
+# 添加字体大小全局参数
+FONT_SIZE = 14  # 默认字体大小
+TITLE_SIZE = 16  # 标题字体大小
+LEGEND_SIZE = 10  # 图例字体大小
+LABEL_SIZE = 14  # 坐标轴标签字体大小
+TICK_SIZE = 8  # 刻度字体大小
 
 # set random seed for reproducibility
 random.seed(42)
@@ -205,7 +213,20 @@ def run_simulation():
 
     return pd.DataFrame(all_results)
 
+# 设置全局的matplotlib参数
+def setup_plot_style():
+    plt.rcParams.update({
+        'font.size': FONT_SIZE,
+        'axes.titlesize': TITLE_SIZE,
+        'axes.labelsize': LABEL_SIZE,
+        'xtick.labelsize': TICK_SIZE,
+        'ytick.labelsize': TICK_SIZE,
+        'legend.fontsize': LEGEND_SIZE,
+        'figure.titlesize': TITLE_SIZE
+    })
+
 # Run simulation and save results
+setup_plot_style()
 results_df = run_simulation()
 
 # Create output directory if it doesn't exist
@@ -253,7 +274,7 @@ improvements.to_csv('data/improvement_percentages.csv', index=False)
 # Create separate visualizations
 
 # 1. Plot active replicas over time
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=FIGURE_SIZE)
 for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
     plt.plot(strategy_data['time'], strategy_data['active_replicas'], label=strategy)
@@ -268,7 +289,7 @@ plt.savefig('results/active_replicas_over_time.pdf')
 plt.close()
 
 # 2. Plot latency over time with timeout threshold
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=FIGURE_SIZE)
 for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
     time_data = strategy_data['time'].values
@@ -300,7 +321,7 @@ plt.savefig('results/latency_over_time.pdf')
 plt.close()
 
 # 3. Plot traffic over time (separate)
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=FIGURE_SIZE)
 traffic_time = results_df[results_df['strategy'] == 'Round-Robin']['time'].values
 traffic_data = results_df[results_df['strategy'] == 'Round-Robin']['traffic'].values  # Traffic is same for all strategies
 plt.plot(traffic_time, traffic_data, color='black', linestyle='-', label='Traffic (RPS)')
@@ -314,18 +335,34 @@ plt.savefig('results/traffic_over_time.pdf')
 plt.close()
 
 # 4. Bar chart comparing average active replicas
-plt.figure(figsize=(10, 6))
-avg_active = summary['active_replicas']
-plt.bar(avg_active.index, avg_active.values)
-plt.ylabel('Number of Replicas')
+plt.figure(figsize=FIGURE_SIZE)
+plt.grid(True, alpha=0.3, zorder=0)  # 设置网格在背景
 
-plt.grid(True, linestyle='--', alpha=0.7)
+avg_active = summary['active_replicas']
+colors_list = ['#4C72B0', '#55A868', '#C44E52']
+hatches = ['/', '.', 'x']  # 不同的花纹样式
+
+# 创建带花纹的柱状图
+bars = plt.bar(avg_active.index, avg_active.values,
+               color=[colors_list[i % len(colors_list)] for i in range(len(avg_active))],
+               edgecolor='black', linewidth=1.5,
+               hatch=[hatches[i % len(hatches)] for i in range(len(avg_active))],
+               zorder=2)
+
+# 添加数值标签
+for i, v in enumerate(avg_active.values):
+    plt.text(i, v, f"{v:.1f}",
+             ha='center', va='bottom',
+             zorder=3)
+
+plt.ylim(0, 10.1)  # Limit y-axis to number of replicas
+plt.ylabel('Number of Replicas')
 plt.tight_layout()
 plt.savefig('results/avg_active_replicas.pdf')
 plt.close()
 
 # # 5. Resource efficiency visualization (latency vs replicas)
-# plt.figure(figsize=(10, 6))
+# plt.figure(figsize=FIGURE_SIZE)
 # for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
 #     strategy_data = results_df[results_df['strategy'] == strategy]
 #     original_avg_latency = strategy_data['p90_latency'].mean()
