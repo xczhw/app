@@ -12,26 +12,12 @@ SAMPLING_INTERVAL = 1  # minute
 CPU_THRESHOLD = 5  # % threshold for active replica counting
 
 # Traffic patterns - requests per second
-def generate_traffic(pattern="stable", duration=SIMULATION_DURATION):
+def generate_traffic(pattern="ramp-up", duration=SIMULATION_DURATION):
     time_points = np.arange(0, duration, SAMPLING_INTERVAL)
 
-    if pattern == "stable":
-        base_traffic = 500
-        return [base_traffic + random.randint(-50, 50) for _ in time_points]
-    elif pattern == "bursty":
-        base_traffic = 300
-        traffic = []
-        for t in time_points:
-            if t % 10 < 2:  # Create bursts every 10 minutes
-                traffic.append(base_traffic * 3 + random.randint(-100, 100))
-            else:
-                traffic.append(base_traffic + random.randint(-50, 50))
-        return traffic
-    elif pattern == "ramp-up":
-        base_traffic = 100
-        return [base_traffic + int(t * 15) + random.randint(-30, 30) for t in time_points]
-
-    return [500 for _ in time_points]  # Default
+    # Only keep ramp-up pattern
+    base_traffic = 100
+    return [base_traffic + int(t * 15) + random.randint(-30, 30) for t in time_points]
 
 # Load balancing strategies
 class LoadBalancer:
@@ -49,7 +35,6 @@ class LoadBalancer:
         # Simple model: 1 rps = 0.2% CPU on average with some randomness
         for i in range(self.num_replicas):
             # CPU usage decays by 30% each interval to simulate cooldown
-            self.cpu_usage[i] = max(0, self.cpu_usage[i] * 0.7)
 
             # Add new load
             if requests_distribution[i] > 0:
@@ -71,8 +56,8 @@ class LoadBalancer:
             cpu = self.cpu_usage[i]
 
             # CPU impact on latency
-            if cpu < 50:
-                latency = base_latency * (1 + cpu/100)
+            if cpu < 70:
+                latency = base_latency
             elif cpu < 80:
                 latency = base_latency * (1.5 + (cpu-50)/60)
             else:
@@ -131,95 +116,47 @@ class LeastCpuLB(LoadBalancer):
         return distribution
 
 class CILBLB(LoadBalancer):
-    def __init__(self, num_replicas, low_threshold=30, high_threshold=75, safe_cpu=85):
+    def __init__(self, num_replicas, cpu_threshold=85):
         super().__init__(num_replicas)
         self.name = "CILB"
-        self.low_threshold = low_threshold    # Threshold to consider removing replicas
-        self.high_threshold = high_threshold  # Threshold to consider adding replicas
-        self.safe_cpu = safe_cpu              # Max safe CPU threshold for any replica
-        self.active_replicas = [0]            # Start with 1 active replica
-        self.hysteresis_counter = 0           # Prevents rapid oscillations
+        self.cpu_threshold = cpu_threshold  # CPU使用率阈值，超过此值不再分配流量
+        self.active_replicas = []  # 跟踪活跃的副本
 
     def route_traffic(self, requests_per_second):
         distribution = [0] * self.num_replicas
 
-        # Key CILB principle: Prefer loading existing replicas rather than spreading thinly
-        # Sort active replicas by CPU (ascending)
-        active_sorted = sorted(self.active_replicas, key=lambda i: self.cpu_usage[i])
+        # 按CPU使用率从高到低排序所有副本
+        cpu_with_index = [(self.cpu_usage[i], i) for i in range(self.num_replicas)]
+        cpu_with_index.sort(reverse=True)  # 降序排序
 
-        # Estimate how much traffic we can send to each replica
-        # based on its current CPU and our safe threshold
+        # 将每个请求分配给第一个未超过阈值的副本
         remaining_traffic = requests_per_second
 
-        # First pass: estimate how much each replica can handle
-        for i in active_sorted:
-            current_cpu = self.cpu_usage[i]
-            available_cpu = self.safe_cpu - current_cpu
+        # 分配流量
+        while remaining_traffic > 0:
+            found_available_replica = False
 
-            # Each unit of traffic adds approximately 0.2% CPU
-            cpu_per_request = 0.2
-            can_handle = available_cpu / cpu_per_request
+            for cpu, idx in cpu_with_index:
+                # 如果CPU使用率低于阈值，将一个请求分配给它
+                if cpu < self.cpu_threshold:
+                    # 假设每个请求增加0.2%的CPU
+                    distribution[idx] += 1
+                    self.cpu_usage[idx] += 0.2
+                    remaining_traffic -= 1
+                    found_available_replica = True
+                    break
 
-            # Assign traffic to this replica
-            traffic_to_assign = min(remaining_traffic, can_handle)
-            distribution[i] = traffic_to_assign
-            remaining_traffic -= traffic_to_assign
-
-            # If we've assigned all traffic, we're done
-            if remaining_traffic <= 0:
+            # 如果没有找到可用副本或已分配所有流量，结束循环
+            if not found_available_replica or remaining_traffic <= 0:
                 break
 
-        # If we still have traffic to assign, we need more replicas
+        # 更新活跃副本列表（CPU使用率大于5%的副本）
+        self.active_replicas = [i for i in range(self.num_replicas) if self.cpu_usage[i] > CPU_THRESHOLD]
+
+        # 如果还有剩余流量但所有副本都超过阈值，按比例分配给所有副本
         if remaining_traffic > 0:
-            # Find inactive replicas to activate
-            inactive = [i for i in range(self.num_replicas) if i not in self.active_replicas]
-
-            # Activate another replica if available
-            if inactive and self.hysteresis_counter >= 0:
-                new_replica = inactive[0]
-                self.active_replicas.append(new_replica)
-
-                # Assign remaining traffic to the new replica
-                distribution[new_replica] = remaining_traffic
-                remaining_traffic = 0
-
-                # Reset hysteresis counter
-                self.hysteresis_counter = -2  # Wait 2 cycles before next scale event
-
-        # Check if we can deactivate a replica (only if no scale-up just happened)
-        elif len(self.active_replicas) > 1 and self.hysteresis_counter >= 0:
-            # Calculate average CPU across active replicas
-            avg_cpu = sum(self.cpu_usage[i] for i in self.active_replicas) / len(self.active_replicas)
-
-            # If average CPU is below threshold, consider removing least used replica
-            if avg_cpu < self.low_threshold:
-                # Find least utilized replica
-                least_used = min(self.active_replicas, key=lambda i: self.cpu_usage[i])
-
-                # Check if removing it would keep average CPU below high threshold
-                remaining_load = sum(distribution[i] for i in self.active_replicas)
-                remaining_load -= distribution[least_used]
-                remaining_replicas = len(self.active_replicas) - 1
-
-                # Would removing this replica push others too high?
-                if remaining_load / remaining_replicas * 0.2 < self.high_threshold:
-                    # Safe to remove
-                    redistribution = distribution[least_used] / remaining_replicas
-                    distribution[least_used] = 0
-
-                    # Redistribute its load
-                    for i in self.active_replicas:
-                        if i != least_used:
-                            distribution[i] += redistribution
-
-                    # Remove from active list
-                    self.active_replicas.remove(least_used)
-
-                    # Reset hysteresis counter
-                    self.hysteresis_counter = -2  # Wait 2 cycles before next scale event
-
-        # Update hysteresis counter
-        self.hysteresis_counter += 1
+            for i in range(self.num_replicas):
+                distribution[i] += remaining_traffic / self.num_replicas
 
         self.update_metrics(distribution)
         return distribution
@@ -230,43 +167,41 @@ def run_simulation():
     lc_lb = LeastCpuLB(NUM_REPLICAS)
     cilb_lb = CILBLB(NUM_REPLICAS)
 
-    # Traffic patterns to simulate
-    patterns = ["stable", "bursty", "ramp-up"]
+    # Only use ramp-up traffic pattern
+    pattern = "ramp-up"
+    traffic = generate_traffic(pattern)
 
     all_results = []
 
-    for pattern in patterns:
-        traffic = generate_traffic(pattern)
+    # Run each load balancer with this traffic pattern
+    for lb in [rr_lb, lc_lb, cilb_lb]:
+        # Reset the load balancer
+        lb.cpu_usage = [0] * NUM_REPLICAS
+        if isinstance(lb, CILBLB):
+            lb.active_replicas = [0]  # Start with one active replica
+            lb.hysteresis_counter = 0
 
-        # Run each load balancer with this traffic pattern
-        for lb in [rr_lb, lc_lb, cilb_lb]:
-            # Reset the load balancer
-            lb.cpu_usage = [0] * NUM_REPLICAS
-            if isinstance(lb, CILBLB):
-                lb.active_replicas = [0]  # Start with one active replica
-                lb.hysteresis_counter = 0
+        results = []
+        for t, rps in enumerate(traffic):
+            # Route traffic according to strategy
+            distribution = lb.route_traffic(rps)
 
-            results = []
-            for t, rps in enumerate(traffic):
-                # Route traffic according to strategy
-                distribution = lb.route_traffic(rps)
+            # Measure metrics
+            active_replicas = lb.get_active_replicas()
+            p95, p99 = lb.get_latency(distribution)
 
-                # Measure metrics
-                active_replicas = lb.get_active_replicas()
-                p95, p99 = lb.get_latency(distribution)
+            results.append({
+                'time': t,
+                'pattern': pattern,
+                'strategy': lb.name,
+                'traffic': rps,
+                'active_replicas': active_replicas,
+                'p95_latency': p95,
+                'p99_latency': p99,
+                'cpu_usage': lb.cpu_usage.copy()
+            })
 
-                results.append({
-                    'time': t,
-                    'pattern': pattern,
-                    'strategy': lb.name,
-                    'traffic': rps,
-                    'active_replicas': active_replicas,
-                    'p95_latency': p95,
-                    'p99_latency': p99,
-                    'cpu_usage': lb.cpu_usage.copy()
-                })
-
-            all_results.extend(results)
+        all_results.extend(results)
 
     return pd.DataFrame(all_results)
 
@@ -280,85 +215,122 @@ if not os.path.exists('results'):
 # Save to CSV
 results_df.to_csv('results/load_balancing_simulation_results.csv', index=False)
 
-# Generate summary statistics for the paper
-summary = results_df.groupby(['pattern', 'strategy'])[['active_replicas', 'p95_latency', 'p99_latency']].mean()
+# Generate summary statistics
+summary = results_df.groupby(['strategy'])[['active_replicas', 'p95_latency', 'p99_latency']].mean()
 summary.to_csv('results/summary_stats.csv')
 
 # Calculate improvements
 improvements = pd.DataFrame()
-for pattern in results_df['pattern'].unique():
-    pattern_data = results_df[results_df['pattern'] == pattern]
+pattern = "ramp-up"  # Only for ramp-up pattern
 
-    # Calculate average metrics by strategy
-    avg_metrics = pattern_data.groupby('strategy')[['active_replicas', 'p95_latency', 'p99_latency']].mean()
+# Calculate average metrics by strategy
+avg_metrics = results_df.groupby('strategy')[['active_replicas', 'p95_latency', 'p99_latency']].mean()
 
-    # Calculate improvement percentages
-    cilb_metrics = avg_metrics.loc['CILB']
-    rr_metrics = avg_metrics.loc['Round-Robin']
-    lc_metrics = avg_metrics.loc['Least-CPU']
+# Calculate improvement percentages
+cilb_metrics = avg_metrics.loc['CILB']
+rr_metrics = avg_metrics.loc['Round-Robin']
+lc_metrics = avg_metrics.loc['Least-CPU']
 
-    # Improvement over Round-Robin
-    rr_improvement = {
-        'pattern': pattern,
-        'comparison': 'CILB vs RR',
-        'active_replicas_reduction': (rr_metrics['active_replicas'] - cilb_metrics['active_replicas']) / rr_metrics['active_replicas'] * 100,
-        'p95_latency_change': (cilb_metrics['p95_latency'] - rr_metrics['p95_latency']) / rr_metrics['p95_latency'] * 100,
-        'p99_latency_change': (cilb_metrics['p99_latency'] - rr_metrics['p99_latency']) / rr_metrics['p99_latency'] * 100
-    }
+# Improvement over Round-Robin
+rr_improvement = {
+    'comparison': 'CILB vs RR',
+    'active_replicas_reduction': (rr_metrics['active_replicas'] - cilb_metrics['active_replicas']) / rr_metrics['active_replicas'] * 100,
+    'p95_latency_change': (cilb_metrics['p95_latency'] - rr_metrics['p95_latency']) / rr_metrics['p95_latency'] * 100,
+    'p99_latency_change': (cilb_metrics['p99_latency'] - rr_metrics['p99_latency']) / rr_metrics['p99_latency'] * 100
+}
 
-    # Improvement over Least-CPU
-    lc_improvement = {
-        'pattern': pattern,
-        'comparison': 'CILB vs LC',
-        'active_replicas_reduction': (lc_metrics['active_replicas'] - cilb_metrics['active_replicas']) / lc_metrics['active_replicas'] * 100,
-        'p95_latency_change': (cilb_metrics['p95_latency'] - lc_metrics['p95_latency']) / lc_metrics['p95_latency'] * 100,
-        'p99_latency_change': (cilb_metrics['p99_latency'] - lc_metrics['p99_latency']) / lc_metrics['p99_latency'] * 100
-    }
+# Improvement over Least-CPU
+lc_improvement = {
+    'comparison': 'CILB vs LC',
+    'active_replicas_reduction': (lc_metrics['active_replicas'] - cilb_metrics['active_replicas']) / lc_metrics['active_replicas'] * 100,
+    'p95_latency_change': (cilb_metrics['p95_latency'] - lc_metrics['p95_latency']) / lc_metrics['p95_latency'] * 100,
+    'p99_latency_change': (cilb_metrics['p99_latency'] - lc_metrics['p99_latency']) / lc_metrics['p99_latency'] * 100
+}
 
-    improvements = pd.concat([improvements, pd.DataFrame([rr_improvement, lc_improvement])])
-
+improvements = pd.concat([improvements, pd.DataFrame([rr_improvement, lc_improvement])])
 improvements.to_csv('results/improvement_percentages.csv', index=False)
 
 # Create visualizations
-plt.figure(figsize=(12, 8))
+plt.figure(figsize=(10, 6))
 
-# Plot active replicas over time for each pattern and strategy
-for idx, pattern in enumerate(['stable', 'bursty', 'ramp-up']):
-    plt.subplot(3, 1, idx+1)
-    pattern_data = results_df[results_df['pattern'] == pattern]
+# Plot active replicas over time
+plt.subplot(2, 1, 1)
+for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
+    strategy_data = results_df[results_df['strategy'] == strategy]
+    plt.plot(strategy_data['time'], strategy_data['active_replicas'], label=strategy)
 
-    for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
-        strategy_data = pattern_data[pattern_data['strategy'] == strategy]
-        plt.plot(strategy_data['time'], strategy_data['active_replicas'], label=strategy)
-
-    plt.title(f'Active Replicas - {pattern.title()} Traffic')
-    plt.xlabel('Time (minutes)')
-    plt.ylabel('Active Replicas')
-    plt.legend()
-
-plt.tight_layout()
-plt.savefig('results/active_replicas_comparison.png')
+plt.title('Active Replicas - Ramp-up Traffic')
+plt.xlabel('Time (minutes)')
+plt.ylabel('Active Replicas')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.7)
 
 # Plot latency over time
-plt.figure(figsize=(12, 8))
-for idx, pattern in enumerate(['stable', 'bursty', 'ramp-up']):
-    plt.subplot(3, 1, idx+1)
-    pattern_data = results_df[results_df['pattern'] == pattern]
+plt.subplot(2, 1, 2)
+for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
+    strategy_data = results_df[results_df['strategy'] == strategy]
+    plt.plot(strategy_data['time'], strategy_data['p95_latency'], label=f'{strategy} P95')
 
-    for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
-        strategy_data = pattern_data[pattern_data['strategy'] == strategy]
-        plt.plot(strategy_data['time'], strategy_data['p95_latency'], label=f'{strategy} P95')
-
-    plt.title(f'P95 Latency - {pattern.title()} Traffic')
-    plt.xlabel('Time (minutes)')
-    plt.ylabel('Latency (ms)')
-    plt.legend()
+plt.title('P95 Latency - Ramp-up Traffic')
+plt.xlabel('Time (minutes)')
+plt.ylabel('Latency (ms)')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.7)
 
 plt.tight_layout()
-plt.savefig('results/latency_comparison.png')
+plt.savefig('results/rampup_performance.png')
+
+# Add a plot for traffic vs active replicas
+plt.figure(figsize=(12, 5))
+traffic_data = results_df[results_df['strategy'] == 'Round-Robin']['traffic'].values  # Traffic is same for all strategies
+
+# Plot traffic
+plt.subplot(1, 2, 1)
+plt.plot(traffic_data, color='black', linestyle='--', label='Traffic (RPS)')
+plt.title('Ramp-up Traffic Pattern')
+plt.xlabel('Time (minutes)')
+plt.ylabel('Requests per Second')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.7)
+
+# Bar chart comparing average active replicas
+plt.subplot(1, 2, 2)
+avg_active = summary['active_replicas']
+plt.bar(avg_active.index, avg_active.values)
+plt.title('Average Active Replicas')
+plt.ylabel('Number of Replicas')
+plt.grid(True, linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.savefig('results/traffic_and_replicas.png')
+
+# Resource efficiency visualization
+plt.figure(figsize=(10, 6))
+
+# Create scatter plot of latency vs active replicas
+for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
+    strategy_data = results_df[results_df['strategy'] == strategy]
+    avg_latency = strategy_data['p95_latency'].mean()
+    avg_replicas = strategy_data['active_replicas'].mean()
+    plt.scatter(avg_replicas, avg_latency, s=100, label=strategy)
+
+plt.title('Resource Efficiency vs Performance')
+plt.xlabel('Average Active Replicas (Resource Usage)')
+plt.ylabel('Average P95 Latency (ms)')
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.legend()
+
+# Add annotation showing percentage improvements
+x_min, x_max = plt.xlim()
+y_min, y_max = plt.ylim()
+plt.text(x_min + (x_max-x_min)*0.05, y_max - (y_max-y_min)*0.1,
+         f"CILB reduces active replicas by:\n{rr_improvement['active_replicas_reduction']:.1f}% vs RR\n{lc_improvement['active_replicas_reduction']:.1f}% vs LC",
+         bbox=dict(facecolor='white', alpha=0.7))
+
+plt.savefig('results/efficiency_vs_performance.png')
 
 print("Simulation completed. Results saved to 'results' directory.")
-print(f"Overall improvement in active replicas: CILB vs RR: {improvements[improvements['comparison'] == 'CILB vs RR']['active_replicas_reduction'].mean():.2f}%")
-print(f"Overall improvement in active replicas: CILB vs LC: {improvements[improvements['comparison'] == 'CILB vs LC']['active_replicas_reduction'].mean():.2f}%")
-print(f"Overall P95 latency change: CILB vs RR: {improvements[improvements['comparison'] == 'CILB vs RR']['p95_latency_change'].mean():.2f}%")
-print(f"Overall P95 latency change: CILB vs LC: {improvements[improvements['comparison'] == 'CILB vs LC']['p95_latency_change'].mean():.2f}%")
+print(f"Active replicas reduction: CILB vs RR: {rr_improvement['active_replicas_reduction']:.2f}%")
+print(f"Active replicas reduction: CILB vs LC: {lc_improvement['active_replicas_reduction']:.2f}%")
+print(f"P95 latency change: CILB vs RR: {rr_improvement['p95_latency_change']:.2f}%")
+print(f"P95 latency change: CILB vs LC: {lc_improvement['p95_latency_change']:.2f}%")

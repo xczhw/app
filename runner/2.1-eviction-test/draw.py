@@ -6,13 +6,16 @@ from datetime import datetime, timedelta
 import numpy as np
 import matplotlib
 
-# 设置更大的全局字体大小
-matplotlib.rcParams.update({'font.size': 16})
-matplotlib.rcParams['axes.labelsize'] = 18
-matplotlib.rcParams['axes.titlesize'] = 20
-matplotlib.rcParams['xtick.labelsize'] = 16
-matplotlib.rcParams['ytick.labelsize'] = 16
-matplotlib.rcParams['legend.fontsize'] = 16
+# 设置全局字体为Times New Roman和字号
+matplotlib.rcParams.update({
+    'font.family': 'Times New Roman',
+    'font.size': 14,
+    'axes.labelsize': 18,
+    'axes.titlesize': 20,
+    'xtick.labelsize': 16,
+    'ytick.labelsize': 16,
+    'legend.fontsize': 14
+})
 
 def load_data(data_dir='data/data-2025-4-25'):
     # 读取CPU使用率数据
@@ -50,7 +53,7 @@ def load_data(data_dir='data/data-2025-4-25'):
 
 def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
     # 保持原来的比例，但增加整体大小以适应更大的字体
-    plt.figure(figsize=(14, 7))
+    plt.figure(figsize=(12, 6))
 
     pod_name = cpu_data.columns[1]  # 获取Pod名称
 
@@ -135,19 +138,15 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
         plt.axvspan(start_min, end_min, color='gray', alpha=0.3, label='Pod Restart' if restart_count == 1 else None)
 
     # 设置标题和标签，使用更大的字体
-    plt.title('CPU and Memory Usage', fontsize=20, pad=15)
-    plt.xlabel('Time from experiment start (minutes)', fontsize=18, labelpad=10)
-    plt.ylabel('Percentage (%)', fontsize=18, labelpad=10)
+    plt.title('CPU and Memory Usage', pad=15)
+    plt.xlabel('Time from experiment start (minutes)', labelpad=10)
+    plt.ylabel('Percentage (%)', labelpad=10)
     plt.grid(True, linestyle='--', alpha=0.7)
-
-    # 增加刻度的间距和数字大小
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
 
     # 创建一个包含所有项目的图例，使用更大的字体
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys(), loc='upper right', fontsize=16, framealpha=0.9)
+    plt.legend(by_label.values(), by_label.keys(), loc='upper right', framealpha=0.9)
 
     # 保存图片，增加DPI以提高质量
     if not os.path.exists(output_dir):
@@ -157,7 +156,7 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])  # 留出空间给底部的注释
 
     plt.savefig(os.path.join(output_dir, 'eviction-test.pdf'), format='pdf', dpi=600, bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description='Plot CPU and Memory usage with restart detection')

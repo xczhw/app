@@ -4,16 +4,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib as mpl
 from matplotlib import font_manager
+from matplotlib.patches import Patch
 
-# ========== 关键改动部分 ==========
-# 指定Times New Roman字体路径
-font_path = '/usr/share/fonts/truetype/msttcorefonts/Times_New_Roman.ttf'
-font_prop = font_manager.FontProperties(fname=font_path)
+# 确保输出目录存在
+if not os.path.exists('fig'):
+    os.makedirs('fig')
 
-# 设置全局默认字体
-# mpl.rcParams['font.family'] = font_prop.get_name()
-mpl.rcParams['mathtext.fontset'] = 'stix'  # 数学字体也用Times New Roman
-# ====================================
+# 设置全局默认字体为Times New Roman
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['mathtext.fontset'] = 'stix'  # 数学字体也用近似的Times New Roman效果
 
 # Create data directory if it doesn't exist
 if not os.path.exists('data'):
@@ -27,9 +26,16 @@ colors = {
     'background': '#D9D9D9' # 浅灰色
 }
 
+# 定义柱状图的花纹 - 使用更稀疏的花纹
+hatches = {
+    'RR': '/',      # 稀疏斜线
+    'LC': '..',     # 稀疏点
+    'RA': 'x'       # 稀疏叉
+}
+
 # Figure size with 4:3 ratio
-fig_width = 10
-fig_height = 7.5
+fig_width = 6
+fig_height = 4.5
 
 # Increase font sizes
 plt.rcParams.update({
@@ -60,14 +66,15 @@ bars = plt.bar(strategies, eviction_rates,
                color=[colors['RR'], colors['LC'], colors['RA']],
                width=0.6, edgecolor='black', linewidth=0.5)
 
-for bar in bars:
+# 添加更稀疏的花纹
+for i, bar in enumerate(bars):
+    bar.set_hatch(hatches[strategies[i]])
     height = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2., height + 0.5,
-             f'{height:.1f}', ha='center', va='bottom', fontsize=16,
-             fontproperties=font_prop)
+             f'{height:.1f}', ha='center', va='bottom')
 
-plt.title('Replica Eviction Rate', fontsize=22)
-plt.ylabel('Evictions per Node per Test Run', fontsize=18)
+# plt.title('Replica Eviction')
+plt.ylabel('Evictions per Node per Test Run')
 plt.ylim(0, max(eviction_rates) * 1.2)
 
 plt.tight_layout()
@@ -92,14 +99,15 @@ bars = plt.bar(strategies, latencies,
                color=[colors['RR'], colors['LC'], colors['RA']],
                width=0.6, edgecolor='black', linewidth=0.5)
 
-for bar in bars:
+# 添加更稀疏的花纹
+for i, bar in enumerate(bars):
+    bar.set_hatch(hatches[strategies[i]])
     height = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2., height + 10,
-             f'{height:.0f} ms', ha='center', va='bottom', fontsize=16,
-             fontproperties=font_prop)
+             f'{height:.0f} ms', ha='center', va='bottom')
 
-plt.title('Cold Start Latency', fontsize=22)
-plt.ylabel('Average Request Latency (ms)', fontsize=18)
+# plt.title('Cold Start Latency')
+plt.ylabel('Average Request Latency (ms)')
 plt.ylim(0, max(latencies) * 1.2)
 
 plt.tight_layout()
@@ -124,14 +132,15 @@ bars = plt.bar(strategies, error_rates,
                color=[colors['RR'], colors['LC'], colors['RA']],
                width=0.6, edgecolor='black', linewidth=0.5)
 
-for bar in bars:
+# 添加更稀疏的花纹
+for i, bar in enumerate(bars):
+    bar.set_hatch(hatches[strategies[i]])
     height = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2., height + 0.2,
-             f'{height:.1f}%', ha='center', va='bottom', fontsize=16,
-             fontproperties=font_prop)
+             f'{height:.1f}%', ha='center', va='bottom')
 
-plt.title('Error Rate Under Pressure', fontsize=22)
-plt.ylabel('Error Rate (%)', fontsize=18)
+# plt.title('Error Rate Under Pressure')
+plt.ylabel('Error Rate (%)')
 plt.ylim(0, max(error_rates) * 1.2)
 
 plt.tight_layout()
@@ -156,14 +165,15 @@ bars = plt.bar(strategies, route_changes,
                color=[colors['RR'], colors['LC'], colors['RA']],
                width=0.6, edgecolor='black', linewidth=0.5)
 
-for bar in bars:
+# 添加更稀疏的花纹
+for i, bar in enumerate(bars):
+    bar.set_hatch(hatches[strategies[i]])
     height = bar.get_height()
     plt.text(bar.get_x() + bar.get_width()/2., height + 1.5,
-             f'{height:.0f}', ha='center', va='bottom', fontsize=16,
-             fontproperties=font_prop)
+             f'{height:.0f}', ha='center', va='bottom')
 
-plt.title('Routing Stability', fontsize=22)
-plt.ylabel('Route Changes per Minute', fontsize=18)
+# plt.title('Routing Stability')
+plt.ylabel('Route Changes per Minute')
 plt.ylim(0, max(route_changes) * 1.2)
 
 plt.tight_layout()
@@ -172,7 +182,7 @@ plt.close()
 
 print("Data and charts have been generated successfully.")
 print("Data saved to 'data/' directory")
-print("Generated 4 charts with 4:3 ratio using Times New Roman font and dashed grid lines:")
+print("Generated 4 charts with 4:3 ratio using Times New Roman font, dashed grid lines, and sparser pattern-filled bars:")
 print("1. eviction_rate.pdf")
 print("2. cold_start_latency.pdf")
 print("3. error_rate_under_pressure.pdf")
