@@ -172,7 +172,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     plt.plot(cpu_df['Elapsed'], cpu_df['Average'], color='blue', linewidth=2, label='Average CPU usage')
     plt.xlabel('Time from Experiment Start (minutes)')
     plt.ylabel('CPU Usage (%)')
-    plt.title('CPU Usage Over Time')
+
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     plt.savefig(os.path.join(output_dir, 'cpu_usage.pdf'), bbox_inches='tight')
@@ -214,7 +214,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
 
     plt.xlabel('Time from Experiment Start (minutes)')
     plt.ylabel('Latency (ms)')
-    plt.title('Latency Percentiles Over Time')
+
     plt.grid(True, linestyle='--', alpha=0.7)
 
     # 处理图例，避免重复
@@ -238,7 +238,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
 
     plt.xlabel('Time from Experiment Start (minutes)')
     plt.ylabel('Requests per Second')
-    plt.title('Request Rate Over Time')
+
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     plt.savefig(os.path.join(output_dir, 'rps.pdf'), bbox_inches='tight')

@@ -217,7 +217,7 @@ def set_time_axis(ax):
 # 图1：流量模式
 plt.figure(figsize=(fig_width, fig_height))
 plt.plot(time_points, traffic, color=colors['total_rps'], linewidth=3)
-plt.title('Traffic Pattern')
+
 set_time_axis(plt.gca())
 plt.ylabel('Requests Per Seconds')
 plt.grid(True, alpha=0.3)
@@ -229,7 +229,7 @@ plt.close()
 plt.figure(figsize=(fig_width, fig_height))
 plt.plot(time_points, baseline_replicas, color=colors['p99'], linewidth=3, label='Baseline')
 plt.plot(time_points, decoupled_replicas, color=colors['cpu_avg'], linewidth=3, label='Decoupled')
-plt.title('Number of Replicas Comparison')
+
 set_time_axis(plt.gca())
 plt.ylabel('Number of Replicas')
 plt.grid(True, alpha=0.3)
@@ -243,7 +243,7 @@ plt.close()
 # plt.plot(time_points, baseline_cpu, color=colors['p99'], linewidth=3, label='Baseline')
 # plt.plot(time_points, decoupled_cpu, color=colors['cpu_avg'], linewidth=3, label='Decoupled')
 # plt.axhline(y=50, color=colors['p90'], linestyle='--', linewidth=2, label='Threshold')
-# plt.title('CPU Utilization Comparison')
+#
 # set_time_axis(plt.gca())
 # plt.ylabel('CPU Utilization (%)')
 # plt.grid(True, alpha=0.3)
@@ -267,7 +267,7 @@ plt.plot(time_points, baseline_p99, color=colors['p99'], linewidth=3,
 plt.plot(time_points, decoupled_p99, color=colors['p99'], linewidth=3,
          linestyle='--', label='Decoupled p99')
 
-plt.title('Latency Percentiles Comparison')
+
 set_time_axis(plt.gca())
 plt.ylabel('Latency (ms)')
 plt.grid(True, alpha=0.3)
@@ -307,7 +307,7 @@ for i, v in enumerate(decoupled_values):
 plt.ylim(0, max(max(baseline_values), max(decoupled_values)) * 1.2)
 plt.xticks(x, metrics)
 plt.ylabel('Value')
-plt.title('Performance Metrics Comparison')
+
 plt.legend()
 plt.tight_layout()
 plt.savefig('fig/metrics_comparison.pdf')

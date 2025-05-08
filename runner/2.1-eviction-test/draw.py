@@ -138,7 +138,7 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
         plt.axvspan(start_min, end_min, color='gray', alpha=0.3, label='Pod Restart' if restart_count == 1 else None)
 
     # 设置标题和标签，使用更大的字体
-    plt.title('CPU and Memory Usage', pad=15)
+
     plt.xlabel('Time from experiment start (minutes)', labelpad=10)
     plt.ylabel('Percentage (%)', labelpad=10)
     plt.grid(True, linestyle='--', alpha=0.7)

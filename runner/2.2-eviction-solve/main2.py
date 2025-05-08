@@ -73,7 +73,7 @@ for i, bar in enumerate(bars):
     plt.text(bar.get_x() + bar.get_width()/2., height + 0.5,
              f'{height:.1f}', ha='center', va='bottom')
 
-# plt.title('Replica Eviction')
+#
 plt.ylabel('Evictions per Node per Test Run')
 plt.ylim(0, max(eviction_rates) * 1.2)
 
@@ -106,7 +106,7 @@ for i, bar in enumerate(bars):
     plt.text(bar.get_x() + bar.get_width()/2., height + 10,
              f'{height:.0f} ms', ha='center', va='bottom')
 
-# plt.title('Cold Start Latency')
+#
 plt.ylabel('Average Request Latency (ms)')
 plt.ylim(0, max(latencies) * 1.2)
 
@@ -139,7 +139,7 @@ for i, bar in enumerate(bars):
     plt.text(bar.get_x() + bar.get_width()/2., height + 0.2,
              f'{height:.1f}%', ha='center', va='bottom')
 
-# plt.title('Error Rate Under Pressure')
+#
 plt.ylabel('Error Rate (%)')
 plt.ylim(0, max(error_rates) * 1.2)
 
@@ -172,7 +172,7 @@ for i, bar in enumerate(bars):
     plt.text(bar.get_x() + bar.get_width()/2., height + 1.5,
              f'{height:.0f}', ha='center', va='bottom')
 
-# plt.title('Routing Stability')
+#
 plt.ylabel('Route Changes per Minute')
 plt.ylim(0, max(route_changes) * 1.2)
 

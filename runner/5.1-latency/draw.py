@@ -115,9 +115,6 @@ def create_app_chart(app, data, color_map, to_values):
     ax.set_yticks(y_positions)
     ax.set_yticklabels(df['Algorithm'], fontsize=14)
 
-    # 设置图表标题
-    ax.set_title(f"{app} (TO = {to_value}ms)", fontsize=20, pad=20)
-
     # 添加网格线
     ax.grid(axis='x', linestyle='--', alpha=0.7)
 
@@ -143,10 +140,6 @@ def create_app_chart(app, data, color_map, to_values):
     ]
 
     ax.legend(handles=legend_elements, loc='lower right', fontsize=12)
-
-    # 添加说明注释
-    fig.text(0.02, 0.01, f"TO = Timeout (exceeds {to_value}ms threshold)",
-             fontsize=10, style='italic', ha='left')
 
     plt.tight_layout()
 

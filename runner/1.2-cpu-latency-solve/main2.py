@@ -7,8 +7,8 @@ import os
 
 # Simulation parameters
 NUM_REPLICAS = 10
-SIMULATION_DURATION = 60  # minutes
-SAMPLING_INTERVAL = 1  # minute
+SIMULATION_DURATION = 30  # minutes
+SAMPLING_INTERVAL = 0.25  # minute
 CPU_THRESHOLD = 5  # % threshold for active replica counting
 
 # Traffic patterns - requests per second
@@ -16,8 +16,8 @@ def generate_traffic(pattern="ramp-up", duration=SIMULATION_DURATION):
     time_points = np.arange(0, duration, SAMPLING_INTERVAL)
 
     # Only keep ramp-up pattern
-    base_traffic = 100
-    return [base_traffic + int(t * 15) + random.randint(-30, 30) for t in time_points]
+    base_traffic = 10
+    return [base_traffic + int(t * 5) + random.randint(-10, 10) for t in time_points]
 
 # Load balancing strategies
 class LoadBalancer:
@@ -259,7 +259,7 @@ for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
     plt.plot(strategy_data['time'], strategy_data['active_replicas'], label=strategy)
 
-plt.title('Active Replicas - Ramp-up Traffic')
+
 plt.xlabel('Time (minutes)')
 plt.ylabel('Active Replicas')
 plt.legend()
@@ -271,7 +271,7 @@ for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     strategy_data = results_df[results_df['strategy'] == strategy]
     plt.plot(strategy_data['time'], strategy_data['p95_latency'], label=f'{strategy} P95')
 
-plt.title('P95 Latency - Ramp-up Traffic')
+
 plt.xlabel('Time (minutes)')
 plt.ylabel('Latency (ms)')
 plt.legend()
@@ -287,7 +287,7 @@ traffic_data = results_df[results_df['strategy'] == 'Round-Robin']['traffic'].va
 # Plot traffic
 plt.subplot(1, 2, 1)
 plt.plot(traffic_data, color='black', linestyle='--', label='Traffic (RPS)')
-plt.title('Ramp-up Traffic Pattern')
+
 plt.xlabel('Time (minutes)')
 plt.ylabel('Requests per Second')
 plt.legend()
@@ -297,7 +297,7 @@ plt.grid(True, linestyle='--', alpha=0.7)
 plt.subplot(1, 2, 2)
 avg_active = summary['active_replicas']
 plt.bar(avg_active.index, avg_active.values)
-plt.title('Average Active Replicas')
+
 plt.ylabel('Number of Replicas')
 plt.grid(True, linestyle='--', alpha=0.7)
 
@@ -314,7 +314,7 @@ for strategy in ['Round-Robin', 'Least-CPU', 'CILB']:
     avg_replicas = strategy_data['active_replicas'].mean()
     plt.scatter(avg_replicas, avg_latency, s=100, label=strategy)
 
-plt.title('Resource Efficiency vs Performance')
+
 plt.xlabel('Average Active Replicas (Resource Usage)')
 plt.ylabel('Average P95 Latency (ms)')
 plt.grid(True, linestyle='--', alpha=0.7)

@@ -18,7 +18,7 @@ def load_data(data_dir):
 def create_sample_data():
     """Create sample data if no data file exists."""
     data = {
-        "strategy": ["Random", "RoundRobin", "WRR", "CPU-P2C", "LL", "LL-P2C", "YARP-P2C", 
+        "strategy": ["Random", "RoundRobin", "WRR", "CPU-P2C", "LL", "LL-P2C", "YARP-P2C",
                      "Linear", "C3", "Prequal", "RingHash", "Maglev", "CILB+RA+DA"],
         "online_boutique_replicas": [8.7, 8.5, 6.4, 6.2, 6.5, 6.3, 5.9, 5.7, 5.4, 5.2, 5.8, 5.7, 3.9],
         "social_network_replicas": [12.3, 12.1, 9.8, 9.5, 9.9, 9.6, 8.8, 8.4, 8.1, 7.9, 8.6, 8.5, 5.7],
@@ -31,10 +31,10 @@ def plot_resource_usage(data):
     # Define applications
     apps = ["online_boutique", "social_network", "train_ticket"]
     app_labels = ["Online Boutique", "Social Network", "Train Ticket"]
-    
+
     # Extract strategy names
     strategies = data["strategy"].tolist()
-    
+
     # Prepare data for plotting
     app_data = {}
     for app in apps:
@@ -50,7 +50,7 @@ def plot_resource_usage(data):
                 app_data[app] = [0] * len(strategies)
         else:
             app_data[app] = data[col_name].tolist()
-    
+
     # Group strategies by category
     categories = {
         "Basic": ["Random", "RoundRobin"],
@@ -60,18 +60,18 @@ def plot_resource_usage(data):
         "Hash-based": ["RingHash", "Maglev"],
         "Our Approach": ["CILB+RA+DA"]
     }
-    
+
     # Assign colors based on categories
     colors = []
     category_colors = {
         "Basic": "#1f77b4",
-        "CPU-Aware": "#ff7f0e", 
+        "CPU-Aware": "#ff7f0e",
         "Least-Loaded": "#2ca02c",
         "Server-probing": "#d62728",
         "Hash-based": "#9467bd",
         "Our Approach": "#8c564b"
     }
-    
+
     for strategy in strategies:
         for category, strats in categories.items():
             if strategy in strats:
@@ -79,65 +79,63 @@ def plot_resource_usage(data):
                 break
         else:
             colors.append("#7f7f7f")  # Default gray for uncategorized
-    
+
     # Set up the figure
     fig, axs = plt.subplots(1, len(apps), figsize=(16, 8), sharey=True)
-    
+
     # Width of bars
     bar_width = 0.7
-    
+
     # Plot each application
     for i, app in enumerate(apps):
         ax = axs[i]
-        
+
         # Get baseline (best performing strategy excluding our approach)
         our_approach_idx = strategies.index("CILB+RA+DA")
         other_values = [v for j, v in enumerate(app_data[app]) if j != our_approach_idx]
         best_baseline = min(other_values)
         our_value = app_data[app][our_approach_idx]
         reduction_pct = 100 * (best_baseline - our_value) / best_baseline
-        
+
         # Create bars
         bars = ax.bar(np.arange(len(strategies)), app_data[app], bar_width, color=colors)
-        
+
         # Highlight our approach
         bars[our_approach_idx].set_edgecolor('black')
         bars[our_approach_idx].set_linewidth(2)
-        
+
         # Add value labels on top of bars
         for j, bar in enumerate(bars):
             height = bar.get_height()
             ax.text(bar.get_x() + bar.get_width()/2., height + 0.1,
                    f'{height:.1f}', ha='center', va='bottom', fontsize=8)
-        
+
         # Add reduction annotation for our approach
-        ax.annotate(f"-{reduction_pct:.1f}%", 
-                   xy=(our_approach_idx, our_value), 
+        ax.annotate(f"-{reduction_pct:.1f}%",
+                   xy=(our_approach_idx, our_value),
                    xytext=(0, -20),
                    textcoords="offset points",
                    ha='center', va='top',
                    fontweight='bold',
                    color='red')
-        
+
         # Set title and labels
-        ax.set_title(app_labels[i], fontsize=12)
         ax.set_xticks(np.arange(len(strategies)))
         ax.set_xticklabels(strategies, rotation=90, fontsize=8)
         ax.grid(axis='y', linestyle='--', alpha=0.7)
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        
+
         # Only add y-label to the first subplot
         if i == 0:
             ax.set_ylabel('Average Number of Active Replicas', fontsize=12)
-    
+
     # Create a custom legend for categories
     legend_handles = [plt.Rectangle((0,0),1,1, fc=color) for color in category_colors.values()]
-    fig.legend(legend_handles, category_colors.keys(), loc='upper center', 
+    fig.legend(legend_handles, category_colors.keys(), loc='upper center',
                bbox_to_anchor=(0.5, 0.05), ncol=len(category_colors))
-    
+
     plt.tight_layout(rect=[0, 0.1, 1, 0.95])  # Adjust layout to make room for legend
-    plt.suptitle('Resource Efficiency Across Applications', fontsize=16, y=0.98)
-    
+
     # Save figure
     plt.savefig('resource_usage.pdf', format='pdf', bbox_inches='tight')
     print("Figure saved as 'resource_usage.pdf'")
@@ -156,7 +154,7 @@ if __name__ == "__main__":
         if data is None:
             print("Using sample data instead.")
             data = create_sample_data()
-    
+
     # Convert data format if needed
     if "avg_active_replicas" in data.columns:
         # Need to restructure data to have per-application replica counts
@@ -166,6 +164,6 @@ if __name__ == "__main__":
         data["online_boutique_replicas"] = [r * 0.8 for r in base_replicas]
         data["social_network_replicas"] = [r * 1.2 for r in base_replicas]
         data["train_ticket_replicas"] = [r * 1.8 for r in base_replicas]
-    
+
     # Generate the plot
     plot_resource_usage(data)
