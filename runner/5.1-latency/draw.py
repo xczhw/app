@@ -65,14 +65,14 @@ def create_app_chart(app, data, color_map, to_values):
     chart_max = max_display + 200      # 图表的最大X值，留出TO标记空间
 
     # 创建图表
-    fig, ax = plt.figure(figsize=(14, 10)), plt.gca()
+    fig, ax = plt.figure(figsize=(7, 5)), plt.gca()
 
     df = data[app]
     algorithms = df['Algorithm'].tolist()
 
-    # 计算条形图位置
-    bar_height = 0.7
+    # 计算条形图位置 - 使用完全连续的位置
     y_positions = np.arange(len(algorithms))
+    bar_height = 1.0  # 增加高度填满空间
 
     # 绘制P90条形图（主色）
     p90_bars = ax.barh(y_positions, df['P90'], height=bar_height,
@@ -111,15 +111,18 @@ def create_app_chart(app, data, color_map, to_values):
                    f"{int(width)}", ha='center', va='center',
                    color='white', fontweight='bold', fontsize=12)
 
-    # 设置Y轴标签
+    # 设置Y轴标签位置和标签
     ax.set_yticks(y_positions)
     ax.set_yticklabels(df['Algorithm'], fontsize=14)
 
     # 添加网格线
-    ax.grid(axis='x', linestyle='--', alpha=0.7)
+    # ax.grid(axis='x', linestyle='--', alpha=0.7, zorder=0)
 
     # 设置X轴范围和标签
     ax.set_xlim(0, chart_max)
+
+    # 消除Y轴两端的空白
+    ax.set_ylim(-0.5, len(algorithms) - 0.5)
 
     # X轴刻度 - 根据最大值调整
     tick_step = 200 if max_display <= 1000 else 500
@@ -139,9 +142,14 @@ def create_app_chart(app, data, color_map, to_values):
         plt.Rectangle((0, 0), 1, 1, color='gray', alpha=0.4, label='P99 Latency')
     ]
 
-    ax.legend(handles=legend_elements, loc='lower right', fontsize=12)
+    # ax.legend(handles=legend_elements, loc='lower right', fontsize=12)
 
+    # 移除柱状图之间的空白
     plt.tight_layout()
+
+    # 移除图表中的上下边框以减少视觉干扰
+    for spine in ['top', 'right']:
+        ax.spines[spine].set_visible(False)
 
     # 保存图表为PDF
     file_path = os.path.join('fig', f"{app}_latency.pdf")

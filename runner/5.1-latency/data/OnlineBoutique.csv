@@ -1,13 +1,14 @@
 Algorithm,P90,P99
-Random,214,487
-Round Robin,198,432
-Weighted Round Robin,175,389
-CPU-P2C,163,342
-Least Loaded,147,312
-LL-P2C,156,331
-YARP-P2C,192,405
-Linear,204,421
-C3,168,354
-Prequal,159,328
-Ring Hash,221,498
-Maglev,187,392
+Random,428,974
+Round Robin,442,996
+Weighted RR,396,864
+CPU-P2C,374,784
+Least Loaded,408,842
+LL-P2C,384,810
+YARP-P2C,350,778
+Linear,312,662
+C3,318,656
+Prequal,300,630
+Ring Hash,336,708
+Maglev,326,684
+Our,294,624
