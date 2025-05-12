@@ -53,7 +53,7 @@ def plot_autoscaling_charts():
 
     plt.xlabel('Time (minutes)', fontsize=14)
     plt.ylabel('Instance Count / Traffic Load', fontsize=14)
-    plt.title('Autoscaling Behavior Comparison', fontsize=18, pad=10)
+
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='upper left', fontsize=12)
     plt.tight_layout()
@@ -92,7 +92,7 @@ def plot_autoscaling_charts():
 
     plt.xticks(range(1, len(box_data)+1), labels)
     plt.ylabel('CPU Utilization (%)', fontsize=14)
-    plt.title('CPU Utilization Distribution at Different Time Points', fontsize=18, pad=10)
+
     plt.grid(True, linestyle='--', alpha=0.7, axis='y')
     plt.ylim(0, 100)
     plt.legend(loc='upper left', fontsize=12)
@@ -131,7 +131,7 @@ def plot_autoscaling_charts():
 
     plt.xlabel('Time (minutes)', fontsize=14)
     plt.ylabel('CPU Utilization (%)', fontsize=14)
-    plt.title('CPU Utilization Range Over Time', fontsize=18)
+
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend(loc='upper left', fontsize=12)
     plt.tight_layout()
