@@ -4,11 +4,7 @@ import os
 import argparse
 from datetime import datetime, timedelta
 import numpy as np
-import matplotlib
-from utils import *
-
-# 图形尺寸及字体设置
-FIGURE_SIZE = (8, 4.5)
+from utils import COLOR, LINESTYLE, MARKER, HATCH, save_figures
 
 def load_data(data_dir='data/data-2025-4-25'):
     # 读取CPU使用率数据
@@ -46,7 +42,7 @@ def load_data(data_dir='data/data-2025-4-25'):
 
 def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
     # 创建图形和坐标轴
-    fig, ax = plt.subplots(figsize=FIGURE_SIZE)
+    fig, ax = plt.subplots(figsize=(8, 4.5))
 
     pod_name = cpu_data.columns[1]  # 获取Pod名称
 
@@ -109,64 +105,64 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
         for segment in cpu_segments:
             if len(segment) > 1:  # 至少需要两个点才能画线
                 ax.plot(segment['Minutes'], segment[pod_name],
-                         color=COLOR[0],
-                         linestyle=LINESTYLE[0],
-                         linewidth=1.5,
-                         clip_on=False)
+                       color=COLOR[0],
+                       linestyle=LINESTYLE[0],
+                       linewidth=2,
+                       clip_on=False)
 
         for segment in mem_segments:
             if len(segment) > 1:  # 至少需要两个点才能画线
                 ax.plot(segment['Minutes'], segment[pod_name],
-                         color=COLOR[1],
-                         linestyle=LINESTYLE[1],
-                         linewidth=1.5,
-                         clip_on=False)
+                       color=COLOR[1],
+                       linestyle=LINESTYLE[1],
+                       linewidth=2,
+                       clip_on=False)
 
         # 添加图例的代表线
-        ax.plot([], [], color=COLOR[0], linestyle=LINESTYLE[0], linewidth=1.5, label='CPU Usage (%)')
-        ax.plot([], [], color=COLOR[1], linestyle=LINESTYLE[1], linewidth=1.5, label='Memory Usage (%)')
+        ax.plot([], [], color=COLOR[0], linestyle=LINESTYLE[0], linewidth=2, label='CPU Usage (%)')
+        ax.plot([], [], color=COLOR[1], linestyle=LINESTYLE[1], linewidth=2, label='Memory Usage (%)')
     else:
         # 没有重启，直接绘制完整数据
         ax.plot(cpu_data['Minutes'], cpu_data[pod_name],
-                 color=COLOR[0],
-                 linestyle=LINESTYLE[0],
-                 linewidth=1.5,
-                 label='CPU Usage (%)',
-                 clip_on=False)
+               color=COLOR[0],
+               linestyle=LINESTYLE[0],
+               linewidth=2,
+               label='CPU Usage (%)',
+               clip_on=False)
         ax.plot(memory_data['Minutes'], memory_data[pod_name],
-                 color=COLOR[1],
-                 linestyle=LINESTYLE[1],
-                 linewidth=1.5,
-                 label='Memory Usage (%)',
-                 clip_on=False)
+               color=COLOR[1],
+               linestyle=LINESTYLE[1],
+               linewidth=2,
+               label='Memory Usage (%)',
+               clip_on=False)
 
     # 标记重启间隙
     restart_count = 0
     for start_min, end_min in restart_minutes:
         restart_count += 1
         ax.axvspan(start_min, end_min,
-                    color='gray',
-                    alpha=0.3,
-                    hatch=HATCH[2],
-                    edgecolor='0.2',
-                    linewidth=0.5,
-                    label='Pod Restart' if restart_count == 1 else None)
+                  color='gray',
+                  alpha=0.3,
+                  hatch=HATCH[1],  # 使用utils中定义的阴影样式
+                  edgecolor='0.2',
+                  linewidth=0.5,
+                  label='Pod Restart' if restart_count == 1 else None)
 
     # 设置坐标轴标签
     ax.set_xlabel('Time from experiment start (minutes)')
     ax.set_ylabel('Percentage (%)')
 
-    # 添加网格线
-    ax.grid(True, linestyle='--', alpha=0.7)
+    # 添加网格线 (与utils风格一致，使用点状网格线)
+    ax.grid(True, linestyle=':', alpha=0.7)
 
     # 处理图例
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
 
-    # 将图例放在图外，如果空间不足
+    # 将图例放在图外，如果空间不足 (与utils中的风格一致)
     ax.legend(by_label.values(), by_label.keys(),
-               loc='center left',
-               bbox_to_anchor=(1, 0.5))
+             loc='center left',
+             bbox_to_anchor=(1, 0.5))
 
     # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
@@ -174,10 +170,8 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
     # 调整布局，确保所有元素都可见
     plt.tight_layout()
 
-    # 使用save_figures函数保存为多种格式
+    # 使用utils中的save_figures函数保存为多种格式
     save_figures(fig, os.path.join(output_dir, 'eviction-test'))
-
-    plt.close()
 
 def main():
     parser = argparse.ArgumentParser(description='Plot CPU and Memory usage with restart detection')
