@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import os
+sns.set_palette('deep')  # 或 'muted', 'colorblind'
 
 # 确保fig目录存在
 if not os.path.exists('fig'):
@@ -31,22 +32,23 @@ def load_data(apps, to_values):
 
 # 设置颜色方案
 def get_color_map(algorithms):
-    # 定义与参考图类似的颜色
-    colors = {
-        'Round Robin': '#AA0000',  # 深红色
-        'Random': '#885500',       # 棕色
-        'Weighted Round Robin': '#DDAA00',  # 金色
-        'CPU-P2C': '#AAAA00',      # 黄色
-        'Least Loaded': '#008800',  # 绿色
-        'LL-P2C': '#0055DD',       # 蓝色
-        'YARP-P2C': '#880088',     # 紫色
-        'Linear': '#888888',       # 灰色
-        'C3': '#008888',           # 青色
-        'Prequal': '#AAAAAA',      # 浅灰色
-        'Ring Hash': '#DD5500',    # 橙色
-        'Maglev': '#00AAAA',       # 浅青色
-    }
+    # 导入 seaborn 设置色彩方案
 
+    colors = {
+        'Round Robin': 'C0',       # '#4c72b0' 蓝色
+        'Random': 'C1',            # '#dd8452' 橙色
+        'Weighted RR': 'C2', # '#55a868' 绿色
+        'CPU-P2C': 'C3',           # '#c44e52' 红色
+        'Least Loaded': 'C4',      # '#8172b3' 紫色
+        'LL-P2C': 'C5',            # '#937860' 棕色
+        'YARP-P2C': 'C6',          # '#da8bc3' 粉色
+        'Linear': 'C7',            # '#8c8c8c' 灰色
+        'C3': 'C8',                # '#ccb974' 黄色
+        'Prequal': 'C9',           # '#64b5cd' 青色
+        'Ring Hash': 'C0',         # '#4c72b0' 蓝色(重复使用)
+        'Maglev': 'C1',            # '#dd8452' 橙色(重复使用)
+        'Ours': 'C2',              # '#55a868' 绿色(重复使用)
+    }
     # 为没有定义颜色的算法分配颜色
     missing_algs = [alg for alg in algorithms if alg not in colors]
     new_colors = sns.color_palette("husl", len(missing_algs))
@@ -55,8 +57,26 @@ def get_color_map(algorithms):
 
     return colors
 
+def get_hatch_map(algorithms):
+    hatches = {
+        'Round Robin': None,      # 无填充
+        'Random': '/',            # 正斜线
+        'Weighted RR': '\\', # 反斜线
+        'CPU-P2C': '.',           # 点状图案
+        'Least Loaded': 'x',      # 交叉图案
+        'LL-P2C': '-',            # 水平线
+        'YARP-P2C': 'o',          # 小圆圈
+        'Linear': '+',            # 加号
+        'C3': '//',               # 密集正斜线
+        'Prequal': '\\\\',        # 密集反斜线
+        'Ring Hash': None,        # 无填充(重复使用)
+        'Maglev': '/',            # 正斜线(重复使用)
+        'Ours': '\\',             # 反斜线(重复使用)
+    }
+    return hatches
+
 # 为单个应用程序创建图表
-def create_app_chart(app, data, color_map, to_values):
+def create_app_chart(app, data, color_map, hatch_map, to_values):
     # 获取当前应用的TO值
     to_value = to_values.get(app, 2000)
 
@@ -76,7 +96,9 @@ def create_app_chart(app, data, color_map, to_values):
 
     # 绘制P90条形图（主色）
     p90_bars = ax.barh(y_positions, df['P90'], height=bar_height,
-                       color=[color_map[alg] for alg in df['Algorithm']], alpha=1.0)
+                       color=[color_map[alg] for alg in df['Algorithm']],
+                       hatch=[hatch_map[alg] for alg in df['Algorithm']],
+                       alpha=1.0)
 
     # 绘制P99条形图（浅色延伸部分）和TO标记
     for j, (alg, p90, p99) in enumerate(zip(df['Algorithm'], df['P90'], df['P99'])):
@@ -84,7 +106,7 @@ def create_app_chart(app, data, color_map, to_values):
         if p99 >= to_value:  # 表示TO
             # 绘制到最大显示值
             p99_bar = ax.barh(y_positions[j], max_display - p90, height=bar_height,
-                   left=p90, color=color_map[alg], alpha=0.4)
+                   left=p90, color=color_map[alg], hatch=hatch_map[alg], alpha=0.4)
 
             # 添加超出指示 - 确保TO标记在合适位置
             ax.text(max_display + 50, y_positions[j],
@@ -93,7 +115,7 @@ def create_app_chart(app, data, color_map, to_values):
         else:
             # 正常绘制P99延伸部分
             p99_bar = ax.barh(y_positions[j], p99 - p90, height=bar_height,
-                   left=p90, color=color_map[alg], alpha=0.4)
+                   left=p90, color=color_map[alg], hatch=hatch_map[alg], alpha=0.4)
 
             # 添加P99数值标签 - 只在P99延伸部分较长时显示
             if p99 - p90 > 200:
@@ -115,9 +137,6 @@ def create_app_chart(app, data, color_map, to_values):
     ax.set_yticks(y_positions)
     ax.set_yticklabels(df['Algorithm'], fontsize=14)
 
-    # 添加网格线
-    # ax.grid(axis='x', linestyle='--', alpha=0.7, zorder=0)
-
     # 设置X轴范围和标签
     ax.set_xlim(0, chart_max)
 
@@ -136,10 +155,10 @@ def create_app_chart(app, data, color_map, to_values):
     # 添加Y轴标签
     ax.set_ylabel("Load Balancing Algorithm", fontsize=16)
 
-    # 创建图例
+    # 创建图例，包含填充样式
     legend_elements = [
-        plt.Rectangle((0, 0), 1, 1, color='gray', alpha=1.0, label='P90 Latency'),
-        plt.Rectangle((0, 0), 1, 1, color='gray', alpha=0.4, label='P99 Latency')
+        plt.Rectangle((0, 0), 1, 1, color='gray', hatch=None, alpha=1.0, label='P90 Latency'),
+        plt.Rectangle((0, 0), 1, 1, color='gray', hatch=None, alpha=0.4, label='P99 Latency')
     ]
 
     # ax.legend(handles=legend_elements, loc='lower right', fontsize=12)
@@ -178,10 +197,11 @@ def main():
 
     # 创建颜色映射
     color_map = get_color_map(algorithms)
+    hatch_map = get_hatch_map(algorithms)
 
     # 为每个应用程序创建单独的图表
     for app in apps:
-        fig = create_app_chart(app, data, color_map, to_values)
+        fig = create_app_chart(app, data, color_map, hatch_map, to_values)
         plt.close(fig)
 
     print("所有图表已生成完毕，保存在fig目录下")

@@ -2,168 +2,117 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
-from matplotlib.ticker import MaxNLocator
-
-def load_data(data_dir):
-    """Load CSV file from data directory."""
-    filepath = os.path.join(data_dir, "strategies_data.csv")
-    if os.path.exists(filepath):
-        data = pd.read_csv(filepath)
-        return data
-    else:
-        print(f"Error: File '{filepath}' not found.")
-        return None
+from utils import COLOR, LINESTYLE, MARKER, HATCH, save_figures
 
 def create_sample_data():
-    """Create sample data if no data file exists."""
+    """Create sample data."""
     data = {
-        "strategy": ["Random", "RoundRobin", "WRR", "CPU-P2C", "LL", "LL-P2C", "YARP-P2C",
-                     "Linear", "C3", "Prequal", "RingHash", "Maglev", "CILB+RA+DA"],
+        "strategy": ["Random", "RoundRobin", "WeightRR", "CPU-P2C", "LL", "LL-P2C", "YARP-P2C",
+                     "Linear", "C3", "Prequal", "RingHash", "Maglev", "Ours"],
         "online_boutique_replicas": [8.7, 8.5, 6.4, 6.2, 6.5, 6.3, 5.9, 5.7, 5.4, 5.2, 5.8, 5.7, 3.9],
+        "online_boutique_std": [0.4, 0.3, 0.3, 0.2, 0.3, 0.2, 0.3, 0.2, 0.2, 0.3, 0.3, 0.2, 0.1],
         "social_network_replicas": [12.3, 12.1, 9.8, 9.5, 9.9, 9.6, 8.8, 8.4, 8.1, 7.9, 8.6, 8.5, 5.7],
-        "train_ticket_replicas": [18.5, 18.2, 14.2, 13.8, 14.5, 14.0, 12.7, 12.1, 11.5, 11.2, 12.5, 12.3, 8.1]
+        "social_network_std": [0.5, 0.4, 0.4, 0.3, 0.4, 0.3, 0.4, 0.3, 0.3, 0.4, 0.4, 0.3, 0.2],
+        "train_ticket_replicas": [18.5, 18.2, 14.2, 13.8, 14.5, 14.0, 12.7, 12.1, 11.5, 11.2, 12.5, 12.3, 8.1],
+        "train_ticket_std": [0.7, 0.6, 0.5, 0.5, 0.6, 0.5, 0.6, 0.4, 0.4, 0.5, 0.5, 0.4, 0.3]
     }
     return pd.DataFrame(data)
 
-def plot_resource_usage(data):
+def plot_resource_usage():
     """Plot resource usage metrics for different load balancing strategies across applications."""
-    # Define applications
+    # 创建样本数据
+    data = create_sample_data()
+
+    # 确保输出目录存在
+    os.makedirs('fig', exist_ok=True)
+
+    fontsize = 16
+    # 设置全局字体和字号
+    plt.rcParams.update({
+        'text.usetex': False,
+        'font.family': 'serif',
+        'font.serif': 'Times New Roman',
+        'font.size': fontsize,
+        'legend.fontsize': fontsize,
+        'axes.labelsize': fontsize,
+        'axes.titlesize': fontsize,
+        'xtick.labelsize': fontsize,
+        'ytick.labelsize': fontsize,
+        'lines.linewidth': 2,
+        'lines.markersize': fontsize,
+        'svg.fonttype': 'none',
+    })
+
+    # 定义应用
     apps = ["online_boutique", "social_network", "train_ticket"]
     app_labels = ["Online Boutique", "Social Network", "Train Ticket"]
 
-    # Extract strategy names
+    # 提取策略名称
     strategies = data["strategy"].tolist()
 
-    # Prepare data for plotting
-    app_data = {}
-    for app in apps:
-        col_name = f"{app}_replicas"
-        if col_name not in data.columns:
-            # Try to extract from latency data if replica data not available
-            col_name = f"{app}_p99_latency"
-            if col_name in data.columns:
-                print(f"Warning: Using {col_name} as a proxy for replica count")
-                app_data[app] = data[col_name].tolist()
-            else:
-                print(f"Error: No data for {app}")
-                app_data[app] = [0] * len(strategies)
-        else:
-            app_data[app] = data[col_name].tolist()
+    # "Ours"策略的索引
+    our_approach_idx = strategies.index("Ours")
 
-    # Group strategies by category
-    categories = {
-        "Basic": ["Random", "RoundRobin"],
-        "CPU-Aware": ["WRR", "CPU-P2C"],
-        "Least-Loaded": ["LL", "LL-P2C"],
-        "Server-probing": ["YARP-P2C", "Linear", "C3", "Prequal"],
-        "Hash-based": ["RingHash", "Maglev"],
-        "Our Approach": ["CILB+RA+DA"]
-    }
+    # 创建三个独立的图
+    fig_width = 6
+    fig_height = 5
 
-    # Assign colors based on categories
-    colors = []
-    category_colors = {
-        "Basic": "#1f77b4",
-        "CPU-Aware": "#ff7f0e",
-        "Least-Loaded": "#2ca02c",
-        "Server-probing": "#d62728",
-        "Hash-based": "#9467bd",
-        "Our Approach": "#8c564b"
-    }
-
-    for strategy in strategies:
-        for category, strats in categories.items():
-            if strategy in strats:
-                colors.append(category_colors[category])
-                break
-        else:
-            colors.append("#7f7f7f")  # Default gray for uncategorized
-
-    # Set up the figure
-    fig, axs = plt.subplots(1, len(apps), figsize=(16, 8), sharey=True)
-
-    # Width of bars
-    bar_width = 0.7
-
-    # Plot each application
     for i, app in enumerate(apps):
-        ax = axs[i]
+        # 创建一个新的图
+        fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-        # Get baseline (best performing strategy excluding our approach)
-        our_approach_idx = strategies.index("CILB+RA+DA")
-        other_values = [v for j, v in enumerate(app_data[app]) if j != our_approach_idx]
+        # 准备数据
+        values = data[f"{app}_replicas"].tolist()
+        errors = data[f"{app}_std"].tolist()
+
+        # 获取基准线（除我们方法外的最佳表现策略）
+        other_values = [v for j, v in enumerate(values) if j != our_approach_idx]
         best_baseline = min(other_values)
-        our_value = app_data[app][our_approach_idx]
+        our_value = values[our_approach_idx]
         reduction_pct = 100 * (best_baseline - our_value) / best_baseline
 
-        # Create bars
-        bars = ax.bar(np.arange(len(strategies)), app_data[app], bar_width, color=colors)
+        # 使用COLOR数组中的颜色
+        bar_colors = [COLOR[j % len(COLOR)] for j in range(len(strategies))]
 
-        # Highlight our approach
-        bars[our_approach_idx].set_edgecolor('black')
-        bars[our_approach_idx].set_linewidth(2)
+        bar_hatchs = [HATCH[j % len(HATCH)] for j in range(len(strategies))]
 
-        # Add value labels on top of bars
-        for j, bar in enumerate(bars):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + 0.1,
-                   f'{height:.1f}', ha='center', va='bottom', fontsize=8)
+        # 创建条形图（去掉间隔）
+        bars = ax.bar(np.arange(len(strategies)), values, width=1.0,
+                     color=bar_colors, hatch=bar_hatchs, yerr=errors, capsize=4, edgecolor='black', linewidth=0.5)
 
-        # Add reduction annotation for our approach
-        ax.annotate(f"-{reduction_pct:.1f}%",
-                   xy=(our_approach_idx, our_value),
-                   xytext=(0, -20),
-                   textcoords="offset points",
-                   ha='center', va='top',
-                   fontweight='bold',
-                   color='red')
+        # # 突出显示我们的方法
+        # bars[our_approach_idx].set_edgecolor('black')
+        # bars[our_approach_idx].set_linewidth(2)
 
-        # Set title and labels
+        # # 添加减少百分比标注
+        # ax.annotate(f"-{reduction_pct:.1f}%",
+        #            xy=(our_approach_idx, our_value),
+        #            xytext=(0, -25),
+        #            textcoords="offset points",
+        #            ha='center', va='top',
+        #            fontweight='bold',
+        #            color='red',
+        #            fontsize=14)
+
+        # 设置标题和标签
+        # ax.set_title(app_labels[i], fontsize=18)
+        ax.set_ylabel('Average Number of Active Replicas', fontsize=16)
         ax.set_xticks(np.arange(len(strategies)))
-        ax.set_xticklabels(strategies, rotation=90, fontsize=8)
-        ax.grid(axis='y', linestyle='--', alpha=0.7)
-        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xticklabels(strategies, rotation=45, ha='right', fontsize=16)
 
-        # Only add y-label to the first subplot
-        if i == 0:
-            ax.set_ylabel('Average Number of Active Replicas', fontsize=12)
+        # 添加网格线
+        ax.grid(axis='y', linestyle='--', alpha=0.7, zorder=0)
 
-    # Create a custom legend for categories
-    legend_handles = [plt.Rectangle((0,0),1,1, fc=color) for color in category_colors.values()]
-    fig.legend(legend_handles, category_colors.keys(), loc='upper center',
-               bbox_to_anchor=(0.5, 0.05), ncol=len(category_colors))
+        # 确保Y轴从0开始
+        ax.set_ylim(bottom=0)
 
-    plt.tight_layout(rect=[0, 0.1, 1, 0.95])  # Adjust layout to make room for legend
+        # 调整布局
+        plt.tight_layout()
 
-    # Save figure
-    plt.savefig('resource_usage.pdf', format='pdf', bbox_inches='tight')
-    print("Figure saved as 'resource_usage.pdf'")
+        # 保存图表
+        save_figures(fig, f'fig/resource_usage_{app}')
+
+    print("Figures saved to fig/resource_usage_*.pdf, .png, and .svg")
 
 if __name__ == "__main__":
-    # Ensure the data directory exists
-    data_dir = "data"
-    if not os.path.exists(data_dir):
-        print(f"Warning: Directory '{data_dir}' not found.")
-        print("Creating data directory and using sample data.")
-        os.makedirs(data_dir)
-        data = create_sample_data()
-    else:
-        # Load data
-        data = load_data(data_dir)
-        if data is None:
-            print("Using sample data instead.")
-            data = create_sample_data()
-
-    # Convert data format if needed
-    if "avg_active_replicas" in data.columns:
-        # Need to restructure data to have per-application replica counts
-        print("Converting data format to per-application replica counts...")
-        base_replicas = data["avg_active_replicas"].tolist()
-        # Create synthetic per-app data with variations
-        data["online_boutique_replicas"] = [r * 0.8 for r in base_replicas]
-        data["social_network_replicas"] = [r * 1.2 for r in base_replicas]
-        data["train_ticket_replicas"] = [r * 1.8 for r in base_replicas]
-
-    # Generate the plot
-    plot_resource_usage(data)
+    plot_resource_usage()

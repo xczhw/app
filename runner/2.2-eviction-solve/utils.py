@@ -117,7 +117,7 @@ def save_figures(fig, file_stem):
     Save the figure in SVG, PDF, and PNG formats. Close the figure afterwards.
     '''
 
-    for ext in ['svg', 'pdf', 'png']:
+    for ext in ['pdf']:
         file_name = f'{file_stem}.{ext}'
 
         if ext == 'png':

@@ -1,4 +1,4 @@
-Metric,Baseline,Decoupled,Reduction_Percentage
+Metric,Baseline,Ours,Reduction_Percentage
 Scaling Events,25.0,6.0,76.0
 p90 Latency (avg),103.38723754977451,98.67756011852141,4.555376024033607
 p99 Latency (avg),105.72781487828563,101.00314424888202,4.468711128516813

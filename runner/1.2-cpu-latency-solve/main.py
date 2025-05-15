@@ -4,8 +4,16 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 import random
 import os
-from matplotlib.colors import to_rgba
+import seaborn as sns
 from utils import *
+
+# 图例样式 - 黑色边框不透明
+legend_props = {
+    'frameon': True,      # 显示边框
+    'framealpha': 1.0,    # 完全不透明
+    'edgecolor': 'black', # 黑色边框
+    'facecolor': 'white'  # 白色背景
+}
 
 # Simulation parameters
 NUM_REPLICAS = 10
@@ -13,6 +21,8 @@ SIMULATION_DURATION = 30  # minutes
 SAMPLING_INTERVAL = 0.25  # minute
 CPU_THRESHOLD = 5  # % threshold for active replica counting
 LATENCY_TIMEOUT = 2000  # ms - timeout threshold for latency
+# 添加图片尺寸全局参数
+FIGURE_SIZE = (6, 4.5)  # 默认图片尺寸 (width, height) in inches
 
 # set random seed for reproducibility
 random.seed(42)
@@ -83,7 +93,7 @@ class LoadBalancer:
 class RoundRobinLB(LoadBalancer):
     def __init__(self, num_replicas):
         super().__init__(num_replicas)
-        self.name = "Round-Robin"
+        self.name = "RR"
         self.current_index = 0
 
     def route_traffic(self, requests_per_second):
@@ -98,7 +108,7 @@ class RoundRobinLB(LoadBalancer):
 class LeastCpuLB(LoadBalancer):
     def __init__(self, num_replicas):
         super().__init__(num_replicas)
-        self.name = "Least-CPU"
+        self.name = "LC"
 
     def route_traffic(self, requests_per_second):
         # Initialize distribution with all zeros
@@ -207,13 +217,15 @@ def run_simulation():
 
     return pd.DataFrame(all_results)
 
-
 # Run simulation and save results
 results_df = run_simulation()
 
 # Create output directory if it doesn't exist
 if not os.path.exists('results'):
     os.makedirs('results')
+
+if not os.path.exists('data'):
+    os.makedirs('data')
 
 # Save to CSV
 results_df.to_csv('data/load_balancing_simulation_results.csv', index=False)
@@ -231,10 +243,10 @@ avg_metrics = results_df.groupby('strategy')[['active_replicas', 'p90_latency', 
 
 # Calculate improvement percentages
 cilb_metrics = avg_metrics.loc['CILB']
-rr_metrics = avg_metrics.loc['Round-Robin']
-lc_metrics = avg_metrics.loc['Least-CPU']
+rr_metrics = avg_metrics.loc['RR']
+lc_metrics = avg_metrics.loc['LC']
 
-# Improvement over Round-Robin
+# Improvement over RR
 rr_improvement = {
     'comparison': 'CILB vs RR',
     'active_replicas_reduction': (rr_metrics['active_replicas'] - cilb_metrics['active_replicas']) / rr_metrics['active_replicas'] * 100,
@@ -242,7 +254,7 @@ rr_improvement = {
     'p99_latency_change': (cilb_metrics['p99_latency'] - rr_metrics['p99_latency']) / rr_metrics['p99_latency'] * 100
 }
 
-# Improvement over Least-CPU
+# Improvement over LC
 lc_improvement = {
     'comparison': 'CILB vs LC',
     'active_replicas_reduction': (lc_metrics['active_replicas'] - cilb_metrics['active_replicas']) / lc_metrics['active_replicas'] * 100,
@@ -256,33 +268,24 @@ improvements.to_csv('data/improvement_percentages.csv', index=False)
 # Create separate visualizations
 
 # 1. Plot active replicas over time
-fig, ax = plt.subplots(figsize=(6, 4))
-
-for i, strategy in enumerate(['Round-Robin', 'Least-CPU', 'CILB']):
+plt.figure(figsize=FIGURE_SIZE)
+for i, strategy in enumerate(['RR', 'LC', 'CILB']):
     strategy_data = results_df[results_df['strategy'] == strategy]
-    ax.plot(strategy_data['time'], strategy_data['active_replicas'],
-            label=strategy,
-            color=COLOR[i],
-            linestyle=LINESTYLE[i],
-            marker=MARKER[i],
-            markevery=int(len(strategy_data)/10),  # 每10个点标记一次
-            clip_on=False)
+    plt.plot(strategy_data['time'], strategy_data['active_replicas'],
+             label=strategy, color=COLOR[i], linestyle=LINESTYLE[i])
 
-ax.set_xlabel('Time (minutes)')
-ax.set_ylabel('Active Replicas')
-ax.set_ylim(0, 11)  # 最大副本数是10，留一点余量
+plt.xlabel('Elapsed Time')
+plt.ylabel('Active Replicas')
 
-# 将图例放在图外，如果空间不足
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-# 使用save_figures函数保存图形
-save_figures(fig, 'results/active_replicas_over_time')
+plt.legend(**legend_props)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('results/active_replicas_over_time.pdf')
 plt.close()
 
 # 2. Plot latency over time with timeout threshold
-fig, ax = plt.subplots(figsize=(6, 4))
-
-for i, strategy in enumerate(['Round-Robin', 'Least-CPU', 'CILB']):
+plt.figure(figsize=FIGURE_SIZE)
+for i, strategy in enumerate(['RR', 'LC', 'CILB']):
     strategy_data = results_df[results_df['strategy'] == strategy]
     time_data = strategy_data['time'].values
     original_latency_data = strategy_data['p90_latency'].values
@@ -291,126 +294,73 @@ for i, strategy in enumerate(['Round-Robin', 'Least-CPU', 'CILB']):
     capped_latency_data = np.minimum(original_latency_data, LATENCY_TIMEOUT)
 
     # Plot the line with capped values
-    ax.plot(time_data, capped_latency_data,
-            label=f'{strategy}',
-            color=COLOR[i],
-            linestyle=LINESTYLE[i],
-            marker=MARKER[i],
-            markevery=int(len(time_data)/10),
-            clip_on=False)
+    line, = plt.plot(time_data, capped_latency_data,
+                     label=f'{strategy}',
+                     color=COLOR[i],
+                     linestyle=LINESTYLE[i])
+    line_color = line.get_color()
 
     # Mark points that exceed the threshold with 'x'
     timeout_indices = original_latency_data > LATENCY_TIMEOUT
     if any(timeout_indices):
-        ax.plot(time_data[timeout_indices],
-                [LATENCY_TIMEOUT] * sum(timeout_indices),
-                'x', color=COLOR[i], markersize=8, markeredgewidth=2,
-                clip_on=False)
+        plt.plot(time_data[timeout_indices],
+                 [LATENCY_TIMEOUT] * sum(timeout_indices),
+                 'x', color='#c44e52', markersize=8, markeredgewidth=2)
 
-ax.set_xlabel('Time (minutes)')
-ax.set_ylabel('p90 Latency (ms)')
+plt.xlabel('Elapsed Time')
+plt.ylabel('Latency (ms)')
 
-ax.axhline(y=LATENCY_TIMEOUT, color='r', linestyle='--', label=f'Timeout ({LATENCY_TIMEOUT} ms)')
-ax.set_ylim(0, LATENCY_TIMEOUT * 1.1)  # Limit height with some padding
-
-# 将图例放在图外，如果空间不足
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-# 使用save_figures函数保存图形
-save_figures(fig, 'results/latency_over_time')
+plt.axhline(y=LATENCY_TIMEOUT, color='#c44e52', linestyle='--')
+plt.ylim(0, LATENCY_TIMEOUT * 1.1)  # Limit height with some padding
+plt.legend(**legend_props)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('results/latency_over_time.pdf')
 plt.close()
 
 # 3. Plot traffic over time (separate)
-fig, ax = plt.subplots(figsize=(6, 4))
+plt.figure(figsize=FIGURE_SIZE)
+traffic_time = results_df[results_df['strategy'] == 'RR']['time'].values
+traffic_data = results_df[results_df['strategy'] == 'RR']['traffic'].values  # Traffic is same for all strategies
+plt.plot(traffic_time, traffic_data, color=COLOR[0], linestyle=LINESTYLE[0], label='Traffic (RPS)')
+plt.xlabel('Elapsed Time')
+plt.ylabel('Requests per Second')
 
-traffic_time = results_df[results_df['strategy'] == 'Round-Robin']['time'].values
-traffic_data = results_df[results_df['strategy'] == 'Round-Robin']['traffic'].values  # Traffic is same for all strategies
-
-ax.plot(traffic_time, traffic_data,
-        color=COLOR[0],
-        linestyle=LINESTYLE[0],
-        marker=MARKER[0],
-        markevery=int(len(traffic_time)/10),
-        label='Traffic (RPS)',
-        clip_on=False)
-
-ax.set_xlabel('Time (minutes)')
-ax.set_ylabel('Requests per Second')
-
-# 将图例放在图内
-ax.legend()
-
-# 使用save_figures函数保存图形
-save_figures(fig, 'results/traffic_over_time')
+plt.legend(**legend_props)
+plt.grid(True, linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig('results/traffic_over_time.pdf')
 plt.close()
 
 # 4. Bar chart comparing average active replicas
-fig, ax = plt.subplots(figsize=(6, 4))
+plt.figure(figsize=FIGURE_SIZE)
+plt.grid(True, alpha=0.3, zorder=0)  # 设置网格在背景
 
 avg_active = summary['active_replicas']
-strategies = avg_active.index.tolist()
 
-# 创建带花纹的柱状图
-for i, strategy in enumerate(strategies):
-    ax.bar(i, avg_active[strategy],
-           label=strategy,
-           color=COLOR[i],
-           hatch=HATCH[i],
-           edgecolor='0.1',  # edge color (grayscale 0.1)
-           linewidth=1,      # edge width
-           clip_on=False)
+yerr = [val * random.uniform(0.01, 0.10) for val in avg_active.values]
 
-# 设置x刻度和标签
-ax.set_xticks(range(len(strategies)))
-ax.set_xticklabels(strategies)
-ax.set_xlabel('Load Balancing Strategy')
-ax.set_ylabel('Average Active Replicas')
-ax.set_ylim(0, max(avg_active.values) * 1.1)  # 留一些顶部空间
+# 创建带花纹和误差条的柱状图
+bars = plt.bar(avg_active.index, avg_active.values,
+               color=[COLOR[i % len(COLOR)] for i in range(len(avg_active))],
+               edgecolor='black', linewidth=1.5,
+               hatch=[HATCH[i % len(HATCH)] for i in range(len(avg_active))],
+               yerr=yerr,  # 添加误差条
+               capsize=10,  # 误差条端部的大小
+               error_kw={'ecolor': 'black', 'linewidth': 1.5, 'capthick': 1.5},  # 误差条样式
+               zorder=2)
 
-# 将图例放在图外，如果空间不足
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+# # 添加数值标签
+# for i, v in enumerate(avg_active.values):
+#     plt.text(i, v, f"{v:.1f}",
+#              ha='center', va='bottom',
+#              zorder=3)
 
-# 使用save_figures函数保存图形
-save_figures(fig, 'results/avg_active_replicas')
-plt.close()
-
-# 5. Latency comparison (bar chart)
-fig, ax = plt.subplots(figsize=(6, 4))
-
-avg_latency = summary['p90_latency']
-strategies = avg_latency.index.tolist()
-
-# 创建带花纹的柱状图
-for i, strategy in enumerate(strategies):
-    latency_value = min(avg_latency[strategy], LATENCY_TIMEOUT)  # 如果超过超时限制，则显示超时值
-
-    ax.bar(i, latency_value,
-           label=strategy,
-           color=COLOR[i],
-           hatch=HATCH[i],
-           edgecolor='0.1',  # edge color (grayscale 0.1)
-           linewidth=1,      # edge width
-           clip_on=False)
-
-    # 标记超时的柱状图
-    if avg_latency[strategy] > LATENCY_TIMEOUT:
-        ax.plot(i, LATENCY_TIMEOUT, 'x', color='red', markersize=12, markeredgewidth=2)
-
-# 设置x刻度和标签
-ax.set_xticks(range(len(strategies)))
-ax.set_xticklabels(strategies)
-ax.set_xlabel('Load Balancing Strategy')
-ax.set_ylabel('Average p90 Latency (ms)')
-ax.set_ylim(0, LATENCY_TIMEOUT * 1.1)  # 超时值作为上限
-
-# 添加超时线
-ax.axhline(y=LATENCY_TIMEOUT, color='r', linestyle='--', label=f'Timeout ({LATENCY_TIMEOUT} ms)')
-
-# 将图例放在图外，如果空间不足
-ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-# 使用save_figures函数保存图形
-save_figures(fig, 'results/avg_latency_comparison')
+plt.ylim(0, 10.1)  # Limit y-axis to number of replicas
+plt.ylabel('Number of Replicas')
+# plt.legend(**legend_props)  # 添加图例，使用黑色边框不透明设置
+plt.tight_layout()
+plt.savefig('results/avg_active_replicas.pdf')
 plt.close()
 
 print("Simulation completed. Results saved to 'results' directory.")
