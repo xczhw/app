@@ -91,78 +91,6 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
 
     # # 计算并绘制平均CPU使用率
     cpu_df['Average'] = cpu_df[pod_columns].mean(axis=1, skipna=True)
-    # ax1.plot(cpu_df['Elapsed'], cpu_df['Average'], color='blue', linewidth=2, label='Average CPU')
-
-    # ax1.set_ylabel('CPU Usage')
-    # ax1.set_title('CPU Usage Over Time')
-    # ax1.grid(True, linestyle='--', alpha=0.7)
-    # ax1.legend()
-
-    # # 2. 延迟图 - 使用限制在2000ms的数据
-    # # 绘制限制后的延迟数据
-    # ax2.plot(latency_df_capped['Elapsed'], latency_df_capped[p50_col],
-    #          color='green', label='p50')
-    # ax2.plot(latency_df_capped['Elapsed'], latency_df_capped[p90_col],
-    #          color='orange', label='p90')
-    # ax2.plot(latency_df_capped['Elapsed'], latency_df_capped[p99_col],
-    #          color='red', label='p99')
-
-    # # 标记超时数据点
-    # if p50_timeout.any():
-    #     timeouts_x = latency_df.loc[p50_timeout, 'Elapsed']
-    #     ax2.scatter(timeouts_x, [timeout_value] * len(timeouts_x),
-    #                marker='x', color='green', s=40, label='p50 timeout')
-
-    # if p90_timeout.any():
-    #     timeouts_x = latency_df.loc[p90_timeout, 'Elapsed']
-    #     ax2.scatter(timeouts_x, [timeout_value] * len(timeouts_x),
-    #                marker='x', color='orange', s=40, label='p90 timeout')
-
-    # if p99_timeout.any():
-    #     timeouts_x = latency_df.loc[p99_timeout, 'Elapsed']
-    #     ax2.scatter(timeouts_x, [timeout_value] * len(timeouts_x),
-    #                marker='x', color='red', s=40, label='p99 timeout')
-
-    # # 设置Y轴限制，稍微超过超时阈值，以便能看到超时标记
-    # ax2.set_ylim(0, min(2200, timeout_value * 1.1))
-
-    # # 添加超时线
-    # ax2.axhline(y=timeout_value, color='r', linestyle='--', alpha=0.5)
-    # ax2.text(ax2.get_xlim()[1] * 0.98, timeout_value * 1.02, 'Timeout (2000ms)',
-    #          ha='right', va='bottom', color='r', alpha=0.7)
-
-    # ax2.set_ylabel('Latency (ms)')
-    # ax2.set_title('Latency Percentiles Over Time')
-    # ax2.grid(True, linestyle='--', alpha=0.7)
-
-    # # 处理图例，避免重复
-    # handles, labels = ax2.get_legend_handles_labels()
-    # by_label = dict(zip(labels, handles))
-    # ax2.legend(by_label.values(), by_label.keys())
-
-    # # 3. RPS图 - 使用修正的RPS数据格式
-    # # 绘制成功RPS和总RPS
-    # ax3.plot(rps_df['Elapsed'], rps_df[success_rps_col], color='green',
-    #          label='Successful RPS', linewidth=2)
-    # ax3.plot(rps_df['Elapsed'], rps_df[total_rps_col], color='blue',
-    #          label='Total RPS', linewidth=2)
-
-    # # 如果两者有差异，填充差异区域
-    # if not rps_df[success_rps_col].equals(rps_df[total_rps_col]):
-    #     ax3.fill_between(rps_df['Elapsed'], rps_df[total_rps_col], rps_df[success_rps_col],
-    #                      color='red', alpha=0.3, label='Failed Requests')
-
-    # ax3.set_xlabel('Time from Experiment Start (minutes)')
-    # ax3.set_ylabel('Requests per Second')
-    # ax3.set_title('Request Rate Over Time')
-    # ax3.grid(True, linestyle='--', alpha=0.7)
-    # ax3.legend()
-
-    # # 调整布局
-    # plt.tight_layout()
-
-    # # 保存组合图表为PDF
-    # fig.savefig(os.path.join(output_dir, 'performance_metrics.pdf'), bbox_inches='tight')
 
     # 单独保存各个图表为PDF
     # CPU图
@@ -170,7 +98,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     for pod in pod_columns:
         plt.plot(cpu_df['Elapsed'], cpu_df[pod], alpha=0.3, linewidth=1)
     plt.plot(cpu_df['Elapsed'], cpu_df['Average'], color='blue', linewidth=2, label='Average CPU usage')
-    plt.xlabel('Time from Experiment Start (minutes)')
+    plt.xlabel('Elapsed Time')
     plt.ylabel('CPU Usage (%)')
 
     plt.grid(True, linestyle='--', alpha=0.7)
@@ -212,7 +140,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     plt.text(plt.xlim()[1] * 0.98, timeout_value * 1.02, 'Timeout (2000ms)',
              ha='right', va='bottom', color='r', alpha=0.7)
 
-    plt.xlabel('Time from Experiment Start (minutes)')
+    plt.xlabel('Elapsed Time')
     plt.ylabel('Latency (ms)')
 
     plt.grid(True, linestyle='--', alpha=0.7)
@@ -236,7 +164,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
         plt.fill_between(rps_df['Elapsed'], rps_df[total_rps_col], rps_df[success_rps_col],
                          color='#FFD6D6', alpha=0.3, label='Failed Requests')
 
-    plt.xlabel('Time from Experiment Start (minutes)')
+    plt.xlabel('Elapsed Time')
     plt.ylabel('Requests per Second')
 
     plt.grid(True, linestyle='--', alpha=0.7)

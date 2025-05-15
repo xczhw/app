@@ -5,19 +5,10 @@ import argparse
 from datetime import datetime, timedelta
 import numpy as np
 import matplotlib
+from utils import *
 
-# 设置全局字体为Times New Roman和字号
-matplotlib.rcParams.update({
-    'font.family': 'Times New Roman',
-    'font.size': 14,
-    'axes.labelsize': 18,
-    'axes.titlesize': 20,
-    'xtick.labelsize': 16,
-    'ytick.labelsize': 16,
-    'legend.fontsize': 14
-})
-
-FIGURE_SIZE = (9, 4.5)  # 设置图形大小
+# 图形尺寸及字体设置
+FIGURE_SIZE = (8, 4.5)
 
 def load_data(data_dir='data/data-2025-4-25'):
     # 读取CPU使用率数据
@@ -54,8 +45,8 @@ def load_data(data_dir='data/data-2025-4-25'):
     return cpu_data, memory_data, restart_times
 
 def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
-    # 保持原来的比例，但增加整体大小以适应更大的字体和顶部的图例
-    plt.figure(figsize=FIGURE_SIZE)  # 增加了高度以容纳顶部的图例
+    # 创建图形和坐标轴
+    fig, ax = plt.subplots(figsize=FIGURE_SIZE)
 
     pod_name = cpu_data.columns[1]  # 获取Pod名称
 
@@ -72,8 +63,6 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
         start_min = (start - start_time).total_seconds() / 60
         end_min = (end - start_time).total_seconds() / 60
         restart_minutes.append((start_min, end_min))
-
-    ax = plt.gca()
 
     # 创建分段数据
     if restart_times:
@@ -116,55 +105,79 @@ def plot_usage(cpu_data, memory_data, restart_times, output_dir='output'):
                 if not mem_segment.empty:
                     mem_segments.append(mem_segment)
 
-        # 绘制所有数据段，增加线宽以增强可见性
+        # 绘制所有数据段
         for segment in cpu_segments:
             if len(segment) > 1:  # 至少需要两个点才能画线
-                ax.plot(segment['Minutes'], segment[pod_name], 'b-', linewidth=2.5)
+                ax.plot(segment['Minutes'], segment[pod_name],
+                         color=COLOR[0],
+                         linestyle=LINESTYLE[0],
+                         linewidth=1.5,
+                         clip_on=False)
 
         for segment in mem_segments:
             if len(segment) > 1:  # 至少需要两个点才能画线
-                ax.plot(segment['Minutes'], segment[pod_name], 'r-', linewidth=2.5)
+                ax.plot(segment['Minutes'], segment[pod_name],
+                         color=COLOR[1],
+                         linestyle=LINESTYLE[1],
+                         linewidth=1.5,
+                         clip_on=False)
 
         # 添加图例的代表线
-        ax.plot([], [], 'b-', linewidth=2.5, label='CPU Usage (%)')
-        ax.plot([], [], 'r-', linewidth=2.5, label='Memory Usage (%)')
+        ax.plot([], [], color=COLOR[0], linestyle=LINESTYLE[0], linewidth=1.5, label='CPU Usage (%)')
+        ax.plot([], [], color=COLOR[1], linestyle=LINESTYLE[1], linewidth=1.5, label='Memory Usage (%)')
     else:
         # 没有重启，直接绘制完整数据
-        ax.plot(cpu_data['Minutes'], cpu_data[pod_name], 'b-', linewidth=2.5, label='CPU Usage (%)')
-        ax.plot(memory_data['Minutes'], memory_data[pod_name], 'r-', linewidth=2.5, label='Memory Usage (%)')
+        ax.plot(cpu_data['Minutes'], cpu_data[pod_name],
+                 color=COLOR[0],
+                 linestyle=LINESTYLE[0],
+                 linewidth=1.5,
+                 label='CPU Usage (%)',
+                 clip_on=False)
+        ax.plot(memory_data['Minutes'], memory_data[pod_name],
+                 color=COLOR[1],
+                 linestyle=LINESTYLE[1],
+                 linewidth=1.5,
+                 label='Memory Usage (%)',
+                 clip_on=False)
 
     # 标记重启间隙
     restart_count = 0
     for start_min, end_min in restart_minutes:
         restart_count += 1
-        plt.axvspan(start_min, end_min, color='gray', alpha=0.3, label='Pod Restart' if restart_count == 1 else None)
+        ax.axvspan(start_min, end_min,
+                    color='gray',
+                    alpha=0.3,
+                    hatch=HATCH[2],
+                    edgecolor='0.2',
+                    linewidth=0.5,
+                    label='Pod Restart' if restart_count == 1 else None)
 
-    # 设置标签
-    plt.xlabel('Time from experiment start (minutes)', labelpad=10)
-    plt.ylabel('Percentage (%)', labelpad=10)
-    plt.grid(True, linestyle='--', alpha=0.7)
+    # 设置坐标轴标签
+    ax.set_xlabel('Time from experiment start (minutes)')
+    ax.set_ylabel('Percentage (%)')
 
-    # 创建横向图例并放在顶部
-    handles, labels = plt.gca().get_legend_handles_labels()
+    # 添加网格线
+    ax.grid(True, linestyle='--', alpha=0.7)
+
+    # 处理图例
+    handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    plt.legend(
-        by_label.values(),
-        by_label.keys(),
-        loc='upper center',  # 将图例放在顶部中央
-        bbox_to_anchor=(0.5, 1.15),  # 将图例移到图外上方
-        ncol=len(by_label),  # 使所有图例项目横向排列
-        framealpha=0.9
-    )
 
-    # 保存图片，增加DPI以提高质量
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    # 将图例放在图外，如果空间不足
+    ax.legend(by_label.values(), by_label.keys(),
+               loc='center left',
+               bbox_to_anchor=(1, 0.5))
 
-    # 调整布局以确保图例不被裁剪
-    plt.tight_layout(rect=[0, 0, 1, 0.95])  # 顶部留出更多空间给图例
+    # 确保输出目录存在
+    os.makedirs(output_dir, exist_ok=True)
 
-    plt.savefig(os.path.join(output_dir, 'eviction-test.pdf'), format='pdf', dpi=600, bbox_inches='tight')
-    # plt.show()
+    # 调整布局，确保所有元素都可见
+    plt.tight_layout()
+
+    # 使用save_figures函数保存为多种格式
+    save_figures(fig, os.path.join(output_dir, 'eviction-test'))
+
+    plt.close()
 
 def main():
     parser = argparse.ArgumentParser(description='Plot CPU and Memory usage with restart detection')
@@ -173,6 +186,10 @@ def main():
     args = parser.parse_args()
 
     try:
+        # 确保输入和输出目录存在
+        os.makedirs(args.data_dir, exist_ok=True)
+        os.makedirs(args.output_dir, exist_ok=True)
+
         cpu_data, memory_data, restart_times = load_data(args.data_dir)
 
         print(f"Detected {len(restart_times)} pod restarts from restart.csv")
@@ -180,7 +197,7 @@ def main():
             print(f"Restart {i+1}: From {start} to {end}")
 
         plot_usage(cpu_data, memory_data, restart_times, args.output_dir)
-        print(f"Plot saved to {args.output_dir}")
+        print(f"Plots saved to {args.output_dir} in SVG, PDF, and PNG formats")
     except Exception as e:
         print(f"Error: {e}")
         import traceback
