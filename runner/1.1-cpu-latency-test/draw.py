@@ -13,14 +13,17 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     input_dir (str): 输入数据目录路径
     output_dir (str): 输出图像目录路径
     """
-    # 设置全局字体为Times New Roman和字号
+    # 设置统一的字体大小
+    font_size = 16  # 所有文本元素的统一字体大小
+
+    # 设置全局字体为Times New Roman和统一字号
     plt.rcParams['font.family'] = 'Times New Roman'
-    plt.rcParams['font.size'] = 14  # 基本字体大小
-    plt.rcParams['axes.titlesize'] = 18  # 标题字体大小
-    plt.rcParams['axes.labelsize'] = 16  # 轴标签字体大小
-    plt.rcParams['xtick.labelsize'] = 14  # x轴刻度标签字体大小
-    plt.rcParams['ytick.labelsize'] = 14  # y轴刻度标签字体大小
-    plt.rcParams['legend.fontsize'] = 16  # 图例字体大小
+    plt.rcParams['font.size'] = font_size
+    plt.rcParams['axes.titlesize'] = font_size
+    plt.rcParams['axes.labelsize'] = font_size
+    plt.rcParams['xtick.labelsize'] = font_size
+    plt.rcParams['ytick.labelsize'] = font_size
+    plt.rcParams['legend.fontsize'] = font_size
 
     # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
@@ -78,19 +81,19 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     success_rps_col = rps_df.columns[1]  # 成功的RPS列
     total_rps_col = rps_df.columns[2]  # 总发送的RPS列
 
-    # 创建一个包含三个子图的图表，设置共享X轴
-    # fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 15), sharex=True)
-
-    # # 1. CPU使用情况图
-    # # 获取所有pod列（排除Time和Elapsed列）
+    # 获取所有pod列（排除Time和Elapsed列）
     pod_columns = [col for col in cpu_df.columns if col not in ['Time', 'Elapsed']]
 
-    # # 绘制每个pod的CPU使用率
-    # for pod in pod_columns:
-    #     ax1.plot(cpu_df['Elapsed'], cpu_df[pod], alpha=0.3, linewidth=1)
-
-    # # 计算并绘制平均CPU使用率
+    # 计算并绘制平均CPU使用率
     cpu_df['Average'] = cpu_df[pod_columns].mean(axis=1, skipna=True)
+
+    # 设置图例样式 - 黑色边框不透明
+    legend_props = {
+        'frameon': True,      # 显示边框
+        'framealpha': 1.0,    # 完全不透明
+        'edgecolor': 'black', # 黑色边框
+        'facecolor': 'white'  # 白色背景
+    }
 
     # 单独保存各个图表为PDF
     # CPU图
@@ -102,7 +105,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     plt.ylabel('CPU Usage (%)')
 
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
+    plt.legend(**legend_props)
     plt.savefig(os.path.join(output_dir, 'cpu_usage.pdf'), bbox_inches='tight')
 
     # 延迟图
@@ -138,7 +141,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     # 添加超时线
     plt.axhline(y=timeout_value, color='r', linestyle='--', alpha=0.5)
     plt.text(plt.xlim()[1] * 0.98, timeout_value * 1.02, 'Timeout (2000ms)',
-             ha='right', va='bottom', color='r', alpha=0.7)
+             ha='right', va='bottom', color='r', alpha=0.7, fontsize=font_size)
 
     plt.xlabel('Elapsed Time')
     plt.ylabel('Latency (ms)')
@@ -148,7 +151,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     # 处理图例，避免重复
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    plt.legend(by_label.values(), by_label.keys())
+    plt.legend(by_label.values(), by_label.keys(), **legend_props)
 
     plt.savefig(os.path.join(output_dir, 'latency.pdf'), bbox_inches='tight')
 
@@ -168,7 +171,7 @@ def process_data_and_plot(input_dir='./data/Prefect', output_dir='./fig/Prefect'
     plt.ylabel('Requests per Second')
 
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
+    plt.legend(**legend_props)
     plt.savefig(os.path.join(output_dir, 'rps.pdf'), bbox_inches='tight')
 
     print(f"图表已保存到 {output_dir} 目录")
